@@ -15,6 +15,7 @@ public class CreatureLogic : MonoBehaviour
     public MovementLogic movementLogic;
 
 
+
     public void UpdateMaterial()
     {
         if (selected)

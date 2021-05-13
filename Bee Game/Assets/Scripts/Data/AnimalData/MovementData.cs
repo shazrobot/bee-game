@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class MovementData : MonoBehaviour
+[CreateAssetMenu(fileName = "MovementData", menuName = "ScriptableObjects/MovementData", order = 1)]
+public class MovementData : ScriptableObject
 {
     public Vector3 position;
 

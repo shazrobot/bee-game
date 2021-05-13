@@ -7,7 +7,7 @@ public class MovementLogic : MonoBehaviour
     public MovementData data;
     public Transform model;
 
-    private float distanceCheck = .05f;
+    private float distanceCheck = .1f;
 
     private bool DistanceCheck(Vector3 destination)
     {

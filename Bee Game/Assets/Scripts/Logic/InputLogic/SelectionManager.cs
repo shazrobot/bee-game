@@ -6,6 +6,8 @@ public class SelectionManager : MonoBehaviour
 {
     public static SelectionManager instance;
 
+    public RallyPoint rallyPoint;
+
     public RectTransform selectionRectangle;
     public RectTransform selectionRectangleOutline;
     private Vector3 selectionStartPosition;
@@ -14,6 +16,7 @@ public class SelectionManager : MonoBehaviour
 
     public List<CreatureLogic> SelectedUnits = new List<CreatureLogic>();
 
+    private Plane rayDetectionPlane;
     private Ray ray;
     private RaycastHit rayHit;
     private float maxRayDistance = 100.0f;
@@ -93,6 +96,101 @@ public class SelectionManager : MonoBehaviour
         }
     }
 
+    public void HandleIssueCommandsRightClick()
+    {
+        
+        if (Input.GetMouseButtonDown(1))
+        {
+            rayDetectionPlane = new Plane(Vector3.up, new Vector3(0, GetAverageSelectedYPosition(), 0));
+            ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+
+            //check to see if it is clicking on a plant first, else do a move
+
+            if (Physics.Raycast(ray, out rayHit, maxRayDistance))
+            {
+                if (rayHit.collider.gameObject.GetComponent<PlantLogic>() != null)
+                {
+                    PlantLogic plant = rayHit.collider.gameObject.GetComponent<PlantLogic>();
+
+                    IssueCollectionCommand(plant);
+                }
+                else
+                {
+                    float collision;
+                    if (rayDetectionPlane.Raycast(ray, out collision))
+                    {
+                        Vector3 hitPoint = ray.GetPoint(collision);
+                        IssueMoveCommand(hitPoint);
+                    }
+                }
+            }
+            else
+            {
+                float collision;
+                if (rayDetectionPlane.Raycast(ray, out collision))
+                {
+                    Vector3 hitPoint = ray.GetPoint(collision);
+                    IssueMoveCommand(hitPoint);
+                }
+            }
+        }
+    }
+
+    private float GetAverageSelectedYPosition()
+    {
+        float average = 0;
+        foreach(CreatureLogic creature in SelectedUnits)
+        {
+            average += creature.movementLogic.data.position.y;
+        }
+        if(SelectedUnits.Count > 0)
+        {
+            average = average / (SelectedUnits.Count);
+        }
+        return average;
+    }
+
+    private void IssueMoveCommand(Vector3 hitPoint)
+    {
+        
+        if(Input.GetKey(KeyCode.LeftShift)|| Input.GetKey(KeyCode.RightShift))
+        {
+            foreach (CreatureLogic creature in SelectedUnits)
+            {
+                creature.movementLogic.EnqueueGoal(hitPoint);
+            }
+        }
+        else
+        {
+            foreach (CreatureLogic creature in SelectedUnits)
+            {
+                creature.movementLogic.ResetGoalToThis(hitPoint);
+            }
+        }
+        DisplaySelectedRallyPoints();
+    }
+
+    private void IssueCollectionCommand(PlantLogic plant)
+    {
+        //tell selected units to collect pollen from plant
+        Debug.Log("gathering");
+    }
+
+    private void DisplaySelectedRallyPoints()
+    {
+        RallyPointManager.instance.GenerateRallyPoints(GetSelectedMovementPoints());
+    }
+
+    private List<Vector3> GetSelectedMovementPoints()
+    {
+        List<Vector3> pointList = new List<Vector3>();
+        foreach (CreatureLogic creature in SelectedUnits)
+        {
+            pointList.AddRange(creature.movementLogic.data.movePathGoals);
+        }
+        return pointList;
+    }
+
     private void DrawSelectionRectangle(Vector3 area)
     {
         selectionRectangle.gameObject.SetActive(true);
@@ -115,6 +213,7 @@ public class SelectionManager : MonoBehaviour
         {
             creature.Select();
             SelectedUnits.Add(creature);
+            RallyPointManager.instance.GenerateRallyPoints(GetSelectedMovementPoints());
             return true;
         }
         return false;
@@ -127,5 +226,6 @@ public class SelectionManager : MonoBehaviour
             creature.Deselect();
         }
         SelectedUnits.Clear();
+        RallyPointManager.instance.GenerateRallyPoints(GetSelectedMovementPoints());
     }
 }

@@ -6,17 +6,19 @@ using UnityEngine;
 public class InputManager : MonoBehaviour
 {
     public static InputManager instance;
-    
 
     private Vector3 rotateStartPosition;
     private Vector3 rotateCurrentPosition;
 
+    
 
     // Start is called before the first frame update
     void Start()
     {
         instance = this;
     }
+
+    
 
     private void HandleMovementMouseInput()
     {
@@ -80,6 +82,7 @@ public class InputManager : MonoBehaviour
     {
         HandleMovementKeyboardInput();
         HandleMovementMouseInput();
+        SelectionManager.instance.HandleIssueCommandsRightClick();
         SelectionManager.instance.HandleMouseSelectionInput();
     }
 

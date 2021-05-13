@@ -44,14 +44,22 @@ public class RallyPoint : MonoBehaviour
 
     private void Draw()
     {
+        baseCircle.gameObject.SetActive(true);
         baseCircle.SetPositions(GenerateBaseCirclePositions());
+        shaft.gameObject.SetActive(true);
         shaft.SetPositions(GenerateShaftPositions());
     }
 
-    public void Start()
+    public void SetRallyPoint(Vector3 pt)
     {
+        point = pt;
         Draw();
     }
 
 
+    public void DestroyChildren()
+    {
+        Destroy(baseCircle.gameObject);
+        Destroy(shaft.gameObject);
+    }
 }
