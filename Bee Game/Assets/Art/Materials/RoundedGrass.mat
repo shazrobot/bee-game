@@ -62,7 +62,7 @@ Material:
     m_Floats:
     - _BendRotationRandom: 0.2
     - _BladeCurve: 2
-    - _BladeForward: 2
+    - _BladeForward: 3
     - _BladeHeight: 8
     - _BladeHeightRandom: 1
     - _BladeWidth: 0.4
@@ -81,10 +81,10 @@ Material:
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
-    - _TessellationUniform: 5
+    - _TessellationUniform: 7
     - _TranslucentGain: 0.5
     - _UVSec: 0
-    - _WindStrength: 0.2
+    - _WindStrength: 0.1
     - _ZWrite: 1
     m_Colors:
     - _BottomColor: {r: 0.050980393, g: 0.5529412, b: 0.42352942, a: 1}
