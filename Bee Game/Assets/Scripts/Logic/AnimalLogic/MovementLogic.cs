@@ -2,71 +2,30 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class MovementLogic : MonoBehaviour
+public class MovementLogic
 {
-    public MovementData data;
-    public Transform model;
+    private static float distanceCheck = .5f;
 
-    private float distanceCheck = .1f;
-
-    private bool DistanceCheck(Vector3 destination)
+    private static bool DistanceCheck(Transform trans, Vector3 destination)
     {
-        return (Vector3.Distance(data.position, destination) < distanceCheck);
+        return (Vector3.Distance(trans.position, destination) < distanceCheck);
     }
 
-    private void MoveTowards()
+    private static void LookTowards(Transform trans, Vector3 bearing)
     {
-        data.position += data.bearing * data.moveSpeed * Time.deltaTime;
-        model.position = data.position;
+        Vector3 newDirection = Vector3.RotateTowards(trans.forward, -bearing, 1f, 0f);
+        trans.rotation = Quaternion.LookRotation(newDirection);
     }
 
-    private void UpdateBearing()
+    public static void MoveTowards(Transform trans, float moveSpeed, Vector3 destination)
     {
-        if (data.movePathGoals.Count > 0)
-        {
-            if (!DistanceCheck(data.movePathGoals[0]))
-            {
-                data.bearing = Vector3.Normalize(data.movePathGoals[0] - data.position);
-            }
-            else
-            {
-                DequeueGoal();
-                UpdateBearing();
-            }
-        }
-        else
-        {
-            data.bearing = Vector3.zero;
-        }
+        Vector3 bearing = Vector3.Normalize(destination - trans.position);
+        trans.position += bearing * moveSpeed * Time.deltaTime;
+        LookTowards(trans, bearing);
     }
 
-    private void UpdateMovement()
+    public static bool ReachedDestination(Transform trans, Vector3 destination)
     {
-        UpdateBearing();
-        MoveTowards();
-    }
-
-    public void ResetGoalToThis(Vector3 goal)
-    {
-        data.movePathGoals.Clear();
-        data.movePathGoals.Add(goal);
-    }
-
-    public void EnqueueGoal(Vector3 goal)
-    {
-        data.movePathGoals.Add(goal);
-    }
-
-    private void DequeueGoal()
-    {
-        if (data.movePathGoals.Count > 0)
-        {
-            data.movePathGoals.RemoveAt(0);
-        }
-    }
-
-    public void Update()
-    {
-        UpdateMovement();
-    }
+        return DistanceCheck(trans, destination);
+    }     
 }

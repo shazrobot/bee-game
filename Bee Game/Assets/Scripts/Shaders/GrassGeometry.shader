@@ -1,4 +1,6 @@
-﻿Shader "Custom/GrassGeometry"
+﻿// Upgrade NOTE: replaced '_Object2World' with 'unity_ObjectToWorld'
+
+Shader "Custom/GrassGeometry"
 {
 	Properties
 	{
@@ -45,6 +47,10 @@
 
 	float _BladeForward;
 	float _BladeCurve;
+
+	uniform float3 _Position;
+	uniform sampler2D _GlobalEffectRT;
+	uniform float _OrthographicCamSize;
 
 	// Simple noise function, sourced from http://answers.unity.com/answers/624136/view.html
 	// Extended discussion on this function can be found at the following link:
@@ -121,13 +127,30 @@
 			vTangent.z, vBinormal.z, vNormal.z
 			);
 
+		//float2 bendUV = mul(unity_ObjectToWorld, pos).xz- _Position.xz;
+		float2 bendUV = pos.xz;// -_Position.xz;
+		bendUV = bendUV / (_OrthographicCamSize*2);
+		bendUV += 0.5;
+
+		//float interactionBend = bendUV.y;//tex2D(_GlobalEffectRT, bendUV).b;
+
+		float interactionBend = tex2Dlod(_GlobalEffectRT, float4(bendUV, 0, 0)).b;
+
+		//float preinteractionBendAmount = (rand(pos.zzx) * _BendRotationRandom);
+		float preinteractionBendAmount = _BendRotationRandom;
+
+		interactionBend = preinteractionBendAmount+ interactionBend > 0.9 ? 0.9 : (preinteractionBendAmount + interactionBend);
+
 		float3x3 facingRotationMatrix = AngleAxis3x3(rand(pos) * UNITY_TWO_PI, float3(0, 0, 1));
-		float3x3 bendRotationMatrix = AngleAxis3x3(rand(pos.zzx) * _BendRotationRandom * UNITY_PI * 0.5, float3(-1, 0, 0));
+		float3x3 bendRotationMatrix = AngleAxis3x3((interactionBend) * UNITY_PI * 0.5, float3(-1, 0, 0));
 
 		float2 uv = pos.xz * _WindDistortionMap_ST.xy + _WindDistortionMap_ST.zw + _WindFrequency * _Time.y;
 
 		float2 windSample = (tex2Dlod(_WindDistortionMap, float4(uv, 0, 0)).xy * 2 - 1) * _WindStrength;
 		float3 wind = normalize(float3(windSample.x, windSample.y, 0));
+
+		wind = preinteractionBendAmount  == interactionBend  ? wind : float3(0, 0, 0);
+
 		float3x3 windRotation = AngleAxis3x3(UNITY_PI * windSample, wind);
 
 		float3x3 transformationMatrix = mul(mul(mul(tangentToLocal, windRotation), facingRotationMatrix), bendRotationMatrix);

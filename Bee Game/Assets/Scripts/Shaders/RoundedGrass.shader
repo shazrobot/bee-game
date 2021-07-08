@@ -24,13 +24,13 @@
 	}
 
 		CGINCLUDE
-		#include "UnityCG.cginc"
-		#include "Autolight.cginc"
-		#include "CustomTessellation.cginc"
+#include "UnityCG.cginc"
+#include "Autolight.cginc"
+#include "CustomTessellation.cginc"
 
-		#define BLADE_SEGMENTS 7
+#define BLADE_SEGMENTS 3
 
-		float _BendRotationRandom;
+			float _BendRotationRandom;
 
 		float _BladeHeight;
 		float _BladeHeightRandom;
@@ -89,10 +89,10 @@
 			o.uv = uv;
 			o._ShadowCoord = ComputeScreenPos(o.pos);
 			o.normal = UnityObjectToWorldNormal(normal);
-			#if UNITY_PASS_SHADOWCASTER
-						// Applying the bias prevents artifacts from appearing on the surface.
-						o.pos = UnityApplyLinearShadowBias(o.pos);
-			#endif
+#if UNITY_PASS_SHADOWCASTER
+			// Applying the bias prevents artifacts from appearing on the surface.
+			o.pos = UnityApplyLinearShadowBias(o.pos);
+#endif
 			return o;
 		}
 
@@ -137,47 +137,21 @@
 			float width = (rand(pos.xzy) * 2 - 1) * _BladeWidthRandom + _BladeWidth;
 			float forward = rand(pos.yyz) * _BladeForward;
 
-
-			for (int i = 0; i < 3; i++)
+			for (int i = 0; i < BLADE_SEGMENTS; i++)
 			{
-				float t = i / (float)3;
-				float segmentHeight = (height-width) * t;
-				float segmentWidth = width;
+				float t = i / (float)BLADE_SEGMENTS;
+				float segmentHeight = height * t;
+				float segmentWidth = width * (1 - t);
 				float segmentForward = pow(t, _BladeCurve) * forward;
 
 				float3x3 transformMatrix = i == 0 ? transformationMatrixFacing : transformationMatrix;
-				
-				triStream.Append(GenerateGrassVertex(pos, segmentWidth, segmentHeight, segmentForward, float2(0, segmentHeight/height), transformMatrix));
-				triStream.Append(GenerateGrassVertex(pos, -segmentWidth, segmentHeight, segmentForward, float2(1, segmentHeight / height), transformMatrix));
+
+				triStream.Append(GenerateGrassVertex(pos, segmentWidth, segmentHeight, segmentForward, float2(0, t), transformMatrix));
+				triStream.Append(GenerateGrassVertex(pos, -segmentWidth, segmentHeight, segmentForward, float2(1, t), transformMatrix));
 
 			}
-			//triStream.Append(GenerateGrassVertex(pos, (-0.92*width), height + 1 - (1 - 0.38), forward, float2(0.5, 1), transformationMatrix));
-			//triStream.Append(GenerateGrassVertex(pos, (0.92*width), height + 1 - (1 - 0.38), forward, float2(0.5, 1), transformationMatrix));
-			
-			float nheight = (height - width);
 
-			triStream.Append(GenerateGrassVertex(pos, width, nheight, forward * (nheight / height), float2(0, nheight/height), transformationMatrix));
-			triStream.Append(GenerateGrassVertex(pos, -width, nheight, forward * (nheight / height), float2(1, nheight/height), transformationMatrix));
-			
-			nheight = 0.38 * width + (height - width);
-
-			triStream.Append(GenerateGrassVertex(pos, 0.92 * width, nheight, forward * (nheight / height), float2(0, nheight/height), transformationMatrix));
-			triStream.Append(GenerateGrassVertex(pos, -0.92 * width, nheight, forward * (nheight / height), float2(1, nheight/height), transformationMatrix));
-
-			nheight = 0.71 * width + (height - width);
-
-			triStream.Append(GenerateGrassVertex(pos, 0.71 * width, nheight, forward * (nheight / height), float2(0, nheight / height), transformationMatrix));
-			triStream.Append(GenerateGrassVertex(pos, -0.71 * width, nheight, forward * (nheight / height), float2(1, nheight / height), transformationMatrix));
-
-			nheight = 0.9 * width + (height - width);
-
-			triStream.Append(GenerateGrassVertex(pos, 0.38 * width, nheight, forward * (nheight / height), float2(0, nheight / height), transformationMatrix));
-			triStream.Append(GenerateGrassVertex(pos, -0.38 * width, nheight, forward * (nheight / height), float2(1, nheight / height), transformationMatrix));
-
-			triStream.Append(GenerateGrassVertex(pos, 0, height, forward, float2(.5, 1), transformationMatrix));
-			//triStream.Append(GenerateGrassVertex(pos, -0.1, 1, 0, float2(0.6, 0.9), transformationMatrix));
-
-			//triStream.Append(GenerateGrassVertex(pos, 0, height + 1, forward, float2(0, 0), transformationMatrix));
+			triStream.Append(GenerateGrassVertex(pos, 0, height, forward, float2(0.5, 1), transformationMatrix));
 		}
 
 		ENDCG

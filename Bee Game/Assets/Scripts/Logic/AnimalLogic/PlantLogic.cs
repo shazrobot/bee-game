@@ -4,11 +4,18 @@ using UnityEngine;
 
 public class PlantLogic : MonoBehaviour
 {
-    public MovementLogic moveLogic;
-    public FoodLogic foodLogic;
+    public int pollenAmount = 100;
+    public int pollenMax = 100;
 
-    public void GatherResources()
+    public bool HasPollen()
     {
+        return (pollenAmount > 0);
+    }
 
+    public int GatherAvailablePollen(int gatherAmount)
+    {
+        int available = (gatherAmount > pollenAmount)?pollenAmount: gatherAmount;
+        pollenAmount -= available;
+        return available;
     }
 }

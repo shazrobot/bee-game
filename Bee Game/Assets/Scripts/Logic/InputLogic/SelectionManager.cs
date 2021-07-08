@@ -12,14 +12,15 @@ public class SelectionManager : MonoBehaviour
     public RectTransform selectionRectangleOutline;
     private Vector3 selectionStartPosition;
     private Vector3 selectionCurrentPosition;
-    private float distanceAllowance = 20f;
+    private float distanceAllowance = 2f;
 
     public List<CreatureLogic> SelectedUnits = new List<CreatureLogic>();
+    public HiveLogic SelectedHives = null;
 
     private Plane rayDetectionPlane;
     private Ray ray;
     private RaycastHit rayHit;
-    private float maxRayDistance = 100.0f;
+    private float maxRayDistance = 1000.0f;
 
 
     // Start is called before the first frame update
@@ -48,34 +49,41 @@ public class SelectionManager : MonoBehaviour
                 HideSelectionRectangle();
             }
         }
-        if (Input.GetMouseButtonUp(0))
+        if (Input.GetMouseButtonUp(0))//Left Click
         {
             HideSelectionRectangle();
 
             selectionCurrentPosition = Input.mousePosition;
 
-
+            DeselectSelectedHives();
             if (!(Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)))
             {
                 DeselectSelectedUnits();
             }
 
-            if (Vector3.Distance(selectionCurrentPosition, selectionStartPosition) < distanceAllowance)
+            if (Vector3.Distance(selectionCurrentPosition, selectionStartPosition) < distanceAllowance) // Click select
             {
                 //individual select
                 ray = Camera.main.ScreenPointToRay(selectionCurrentPosition);
                 if (Physics.Raycast(ray, out rayHit, maxRayDistance))
                 {
-                    if (rayHit.collider.gameObject.GetComponent<CreatureLogic>() != null)
+                    if (rayHit.collider.gameObject.GetComponent<CreatureLogic>() != null) //creature select
                     {
                         CreatureLogic creature = rayHit.collider.gameObject.GetComponent<CreatureLogic>();
 
                         SelectUnit(creature);
                     }
+
+                    if (rayHit.collider.gameObject.GetComponent<HiveLogic>() != null) //Hive select
+                    {
+                        HiveLogic hive = rayHit.collider.gameObject.GetComponent<HiveLogic>();
+
+                        SelectHive(hive);
+                    }
                 }
 
             }
-            else
+            else // Drag select
             {
                 List<CreatureLogic> selecteables = new List<CreatureLogic>(GameObject.FindObjectsOfType<CreatureLogic>());
                 Vector3 point = Vector3.zero;
@@ -86,7 +94,7 @@ public class SelectionManager : MonoBehaviour
                     float minX = Mathf.Min(selectionCurrentPosition.x, selectionStartPosition.x);
                     float maxY = Mathf.Max(selectionCurrentPosition.y, selectionStartPosition.y);
                     float minY = Mathf.Min(selectionCurrentPosition.y, selectionStartPosition.y);
-                    point = Camera.main.WorldToScreenPoint(creature.movementLogic.data.position);
+                    point = Camera.main.WorldToScreenPoint(creature.transform.position);
                     if ((point.x > minX && point.x < maxX) && (point.y > minY && point.y < maxY))
                     {
                         SelectUnit(creature);
@@ -112,7 +120,13 @@ public class SelectionManager : MonoBehaviour
                 {
                     PlantLogic plant = rayHit.collider.gameObject.GetComponent<PlantLogic>();
 
-                    IssueCollectionCommand(plant);
+                    IssueGatherCommand(plant);
+                }
+                else if (rayHit.collider.gameObject.GetComponent<HiveLogic>() != null)
+                {
+                    HiveLogic hive = rayHit.collider.gameObject.GetComponent<HiveLogic>();
+
+                    IssueDeliverCommand(hive);
                 }
                 else
                 {
@@ -141,7 +155,7 @@ public class SelectionManager : MonoBehaviour
         float average = 0;
         foreach(CreatureLogic creature in SelectedUnits)
         {
-            average += creature.movementLogic.data.position.y;
+            average += creature.transform.position.y;
         }
         if(SelectedUnits.Count > 0)
         {
@@ -157,23 +171,55 @@ public class SelectionManager : MonoBehaviour
         {
             foreach (CreatureLogic creature in SelectedUnits)
             {
-                creature.movementLogic.EnqueueGoal(hitPoint);
+                creature.EnqueueGoal(new MoveCommand(MoveType.Move, hitPoint));
             }
         }
         else
         {
             foreach (CreatureLogic creature in SelectedUnits)
             {
-                creature.movementLogic.ResetGoalToThis(hitPoint);
+                creature.ResetCommandsToThis(new MoveCommand(MoveType.Move, hitPoint));
             }
         }
         DisplaySelectedRallyPoints();
     }
 
-    private void IssueCollectionCommand(PlantLogic plant)
+    private void IssueGatherCommand(PlantLogic plant)
     {
-        //tell selected units to collect pollen from plant
-        Debug.Log("gathering");
+        if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+        {
+            foreach (CreatureLogic creature in SelectedUnits)
+            {
+                creature.EnqueueGoal(new MoveCommand(MoveType.Gather, Vector3.zero, plant.gameObject));
+            }
+        }
+        else
+        {
+            foreach (CreatureLogic creature in SelectedUnits)
+            {
+                creature.ResetCommandsToThis(new MoveCommand(MoveType.Gather, Vector3.zero, plant.gameObject));
+            }
+        }
+        DisplaySelectedRallyPoints();
+    }
+
+    private void IssueDeliverCommand(HiveLogic hive)
+    {
+        if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+        {
+            foreach (CreatureLogic creature in SelectedUnits)
+            {
+                creature.EnqueueGoal(new MoveCommand(MoveType.DropOffResources, Vector3.zero, hive.gameObject));
+            }
+        }
+        else
+        {
+            foreach (CreatureLogic creature in SelectedUnits)
+            {
+                creature.ResetCommandsToThis(new MoveCommand(MoveType.DropOffResources, Vector3.zero, hive.gameObject));
+            }
+        }
+        DisplaySelectedRallyPoints();
     }
 
     private void DisplaySelectedRallyPoints()
@@ -186,7 +232,10 @@ public class SelectionManager : MonoBehaviour
         List<Vector3> pointList = new List<Vector3>();
         foreach (CreatureLogic creature in SelectedUnits)
         {
-            pointList.AddRange(creature.movementLogic.data.movePathGoals);
+            foreach(MoveCommand move in creature.moveCommands)
+            {
+                pointList.Add(move.GetDestination());
+            }
         }
         return pointList;
     }
@@ -227,5 +276,28 @@ public class SelectionManager : MonoBehaviour
         }
         SelectedUnits.Clear();
         RallyPointManager.instance.GenerateRallyPoints(GetSelectedMovementPoints());
+    }
+
+    private bool SelectHive(HiveLogic hive)
+    {
+        if (!hive.selected)
+        {
+            hive.Select();
+            SelectedHives = hive;
+            DeselectSelectedUnits();
+            HiveUILogic.instance.SelectHive(SelectedHives);
+            return true;
+        }
+        return false;
+    }
+
+    private void DeselectSelectedHives()
+    {
+        if(SelectedHives != null)
+        {
+            SelectedHives.Deselect();
+            SelectedHives = null;
+        }
+        HiveUILogic.instance.SelectHive();
     }
 }
