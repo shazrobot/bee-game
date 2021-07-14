@@ -7,7 +7,7 @@ public class RallyPoint : MonoBehaviour
 {
     public LineRenderer baseCircle;
     public LineRenderer shaft;
-    public Image top;
+    public SpriteRenderer top;
 
     public Vector3 point;
     public float baseWidth;
@@ -42,12 +42,20 @@ public class RallyPoint : MonoBehaviour
         return tempList;
     }
 
+    private void PositionTop()
+    {
+        top.transform.position = point;
+        top.transform.LookAt(Camera.main.transform.position, -Vector3.up);
+    }
+
     private void Draw()
     {
         baseCircle.gameObject.SetActive(false);
         //baseCircle.SetPositions(GenerateBaseCirclePositions());
-        shaft.gameObject.SetActive(true);
-        shaft.SetPositions(GenerateShaftPositions());
+        shaft.gameObject.SetActive(false);
+        //shaft.SetPositions(GenerateShaftPositions());
+        top.gameObject.SetActive(true);
+        PositionTop();
     }
 
     public void SetRallyPoint(Vector3 pt)

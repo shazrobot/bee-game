@@ -7,8 +7,6 @@ public class HiveUILogic : MonoBehaviour
 {
     public static HiveUILogic instance;
 
-    public Image hiveUI;
-
     private HiveLogic hive;
     private Vector3 screenPos;
 
@@ -18,6 +16,7 @@ public class HiveUILogic : MonoBehaviour
     void Start()
     {
         instance = this;
+        HideGrowthHexes();
     }
 
     public void SelectHive(HiveLogic h = null)
@@ -33,14 +32,14 @@ public class HiveUILogic : MonoBehaviour
     {
         if(hive != null)
         {
-            hiveUI.gameObject.SetActive(true);
-            screenPos = Camera.main.WorldToScreenPoint(hive.transform.position);
-            hiveUI.rectTransform.position = screenPos;
+            gameObject.SetActive(true);
+            screenPos = Camera.main.WorldToScreenPoint(hive.GetUIPosition().position);
+            transform.position = screenPos;
             UpdateGrowthHexes();
         }
         else
         {
-            hiveUI.gameObject.SetActive(false);
+            gameObject.SetActive(false);
         }
     }
 

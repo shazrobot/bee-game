@@ -1,6 +1,7 @@
-﻿using System.Collections;
+﻿using UnityEngine.EventSystems;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 public class SelectionManager : MonoBehaviour
 {
@@ -22,6 +23,17 @@ public class SelectionManager : MonoBehaviour
     private RaycastHit rayHit;
     private float maxRayDistance = 1000.0f;
 
+    private bool leftClickInitiated = false;
+    private bool rightClickInitiated = false;
+
+    private Vector3 heightAdjustStartPosition;
+    private Vector3 heightAdjustStartMousePosition;
+    private Vector3 heightAdjustCurrentPosition;
+    private Vector3 heightAdjustCurrentMousePosition;
+    private float heightAdjustDistanceAllowance = 2f;
+    [SerializeField]
+    private float defaultMoveCommandLevelHeight = 10f;
+
 
     // Start is called before the first frame update
     void Start()
@@ -32,11 +44,12 @@ public class SelectionManager : MonoBehaviour
 
     public void HandleMouseSelectionInput()
     {
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonDown(0) && !IsMouseOverUI())
         {
             selectionStartPosition = Input.mousePosition;
+            leftClickInitiated = true;
         }
-        if (Input.GetMouseButton(0))
+        if (Input.GetMouseButton(0) && leftClickInitiated)
         {
             selectionCurrentPosition = Input.mousePosition;
 
@@ -49,8 +62,9 @@ public class SelectionManager : MonoBehaviour
                 HideSelectionRectangle();
             }
         }
-        if (Input.GetMouseButtonUp(0))//Left Click
+        if (Input.GetMouseButtonUp(0) & leftClickInitiated)//Left Click
         {
+            leftClickInitiated = false;
             HideSelectionRectangle();
 
             selectionCurrentPosition = Input.mousePosition;
@@ -107,10 +121,13 @@ public class SelectionManager : MonoBehaviour
     public void HandleIssueCommandsRightClick()
     {
         
-        if (Input.GetMouseButtonDown(1))
+        if (Input.GetMouseButtonDown(1) && !IsMouseOverUI() && HaveCreaturesSelected())
         {
-            rayDetectionPlane = new Plane(Vector3.up, new Vector3(0, GetAverageSelectedYPosition(), 0));
+            //Replaced the averaging of selected y values, to just a simple default height
+            //rayDetectionPlane = new Plane(Vector3.up, new Vector3(0, GetAverageSelectedYPosition(), 0));
+            rayDetectionPlane = new Plane(Vector3.up, new Vector3(0, defaultMoveCommandLevelHeight, 0));
             ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            heightAdjustStartMousePosition = Input.mousePosition;
 
             //check to see if it is clicking on a plant first, else do a move
 
@@ -133,9 +150,10 @@ public class SelectionManager : MonoBehaviour
                     float collision;
                     if (rayDetectionPlane.Raycast(ray, out collision))
                     {
-                        Vector3 hitPoint = ray.GetPoint(collision);
-                        IssueMoveCommand(hitPoint);
+                        heightAdjustStartPosition = ray.GetPoint(collision);
+                        rightClickInitiated = true;
                     }
+                    
                 }
             }
             else
@@ -143,11 +161,38 @@ public class SelectionManager : MonoBehaviour
                 float collision;
                 if (rayDetectionPlane.Raycast(ray, out collision))
                 {
-                    Vector3 hitPoint = ray.GetPoint(collision);
-                    IssueMoveCommand(hitPoint);
+                    heightAdjustStartPosition = ray.GetPoint(collision);
+                    rightClickInitiated = true;
                 }
             }
         }
+        if (Input.GetMouseButton(1) && rightClickInitiated)
+        {
+            heightAdjustCurrentMousePosition = Input.mousePosition;
+            heightAdjustCurrentPosition = heightAdjustStartPosition + (Vector3.up * (heightAdjustCurrentMousePosition.y-heightAdjustStartMousePosition.y)*0.5f);
+            HeightAdjustmentUI.instance.AdjustHeightUI(heightAdjustCurrentPosition, heightAdjustStartPosition);
+            //track changes in y in screenpos, and adjust heightUI
+        }
+        if (Input.GetMouseButtonUp(1) && rightClickInitiated)
+        {
+            IssueMoveCommand(heightAdjustCurrentPosition);
+            HeightAdjustmentUI.instance.HideHeightUI();
+            rightClickInitiated = false;
+        }
+    }
+
+
+
+    //Private Helper functions
+
+    private bool HaveCreaturesSelected()
+    {
+        return (SelectedUnits.Count > 0);
+    }
+
+    private bool IsMouseOverUI()
+    {
+        return EventSystem.current.IsPointerOverGameObject();
     }
 
     private float GetAverageSelectedYPosition()
@@ -224,20 +269,7 @@ public class SelectionManager : MonoBehaviour
 
     private void DisplaySelectedRallyPoints()
     {
-        RallyPointManager.instance.GenerateRallyPoints(GetSelectedMovementPoints());
-    }
-
-    private List<Vector3> GetSelectedMovementPoints()
-    {
-        List<Vector3> pointList = new List<Vector3>();
-        foreach (CreatureLogic creature in SelectedUnits)
-        {
-            foreach(MoveCommand move in creature.moveCommands)
-            {
-                pointList.Add(move.GetDestination());
-            }
-        }
-        return pointList;
+        RallyPointManager.instance.GenerateRallyPoints(SelectedUnits);
     }
 
     private void DrawSelectionRectangle(Vector3 area)
@@ -258,11 +290,12 @@ public class SelectionManager : MonoBehaviour
 
     private bool SelectUnit(CreatureLogic creature)
     {
-        if (!creature.selected)
+        if (!creature.IsSelected())
         {
             creature.Select();
             SelectedUnits.Add(creature);
-            RallyPointManager.instance.GenerateRallyPoints(GetSelectedMovementPoints());
+            DisplaySelectedRallyPoints();
+            SelectionSpriteLogic.instance.AddSelectedObject(creature);
             return true;
         }
         return false;
@@ -275,17 +308,19 @@ public class SelectionManager : MonoBehaviour
             creature.Deselect();
         }
         SelectedUnits.Clear();
-        RallyPointManager.instance.GenerateRallyPoints(GetSelectedMovementPoints());
+        DisplaySelectedRallyPoints();
+        SelectionSpriteLogic.instance.SetSelectedObjects(new List<SelectableLogic>(SelectedUnits));
     }
 
     private bool SelectHive(HiveLogic hive)
     {
-        if (!hive.selected)
+        if (!hive.IsSelected())
         {
             hive.Select();
             SelectedHives = hive;
             DeselectSelectedUnits();
             HiveUILogic.instance.SelectHive(SelectedHives);
+            SelectionSpriteLogic.instance.AddSelectedObject(hive);
             return true;
         }
         return false;
@@ -295,6 +330,7 @@ public class SelectionManager : MonoBehaviour
     {
         if(SelectedHives != null)
         {
+            SelectionSpriteLogic.instance.RemoveSelectedObject(SelectedHives);
             SelectedHives.Deselect();
             SelectedHives = null;
         }

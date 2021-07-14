@@ -8,6 +8,8 @@ public class RallyPointManager : MonoBehaviour
     public RallyPoint template;
 
     private List<RallyPoint> rallyPoints = new List<RallyPoint>();
+    private List<CreatureLogic> creatureList = new List<CreatureLogic>();
+
 
     public LineRenderer line;
 
@@ -40,15 +42,35 @@ public class RallyPointManager : MonoBehaviour
         rallyPoints.Add(rallyPoint);
     }
 
-    //add a bunch of rally points based on vector3 list
-    public void GenerateRallyPoints(List<Vector3> pointArray)
+    private void RedrawRallyPoints()
     {
-        line.positionCount = pointArray.Count;
-        line.SetPositions(pointArray.ToArray());
         DeleteRallyPoints();
-        foreach (Vector3 point in pointArray)
+        foreach (CreatureLogic creature in creatureList)
         {
-            AddNewRallyPoint(point);
+            foreach (MoveCommand command in creature.moveCommands)
+            {
+                AddNewRallyPoint(command.GetDestination());
+            }
         }
     }
+
+    //add a bunch of rally points based on vector3 list
+    public void GenerateRallyPoints(List<CreatureLogic> creatures)
+    {
+        RedrawRallyPoints();
+        creatureList = creatures;
+    }
+
+    public void CreatureFinishedMoveCommand(CreatureLogic creature)
+    {
+        if (creatureList.Contains(creature))
+        {
+            RedrawRallyPoints();
+        }
+    }
+
+    //public void Update()
+    //{
+    //    RedrawRallyPoints();
+    //}
 }

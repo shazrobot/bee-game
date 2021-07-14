@@ -10,7 +10,10 @@ public class InputManager : MonoBehaviour
     private Vector3 rotateStartPosition;
     private Vector3 rotateCurrentPosition;
 
-    
+    private Ray ray;
+    private RaycastHit rayHit;
+    private float maxRayDistance = 1000.0f;
+
 
     // Start is called before the first frame update
     void Start()
@@ -76,12 +79,29 @@ public class InputManager : MonoBehaviour
         CameraControlLogic.instance.Move(Time.unscaledDeltaTime, forward, right);
     }
 
+    private void HandleSelectableMouseOver()
+    {
+        ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+
+        if (Physics.Raycast(ray, out rayHit, maxRayDistance))
+        {
+            SelectableLogic selected = rayHit.collider.gameObject.GetComponent<SelectableLogic>();
+            if (selected != null)
+            {
+                MouseOverSpriteLogic.instance.SetTarget(selected.GetUIPosition(), selected.GetUIScale());
+                return;
+            }
+        }
+        MouseOverSpriteLogic.instance.SetTarget();
+    }
+
 
     // Update is called once per frame
     void Update()
     {
         HandleMovementKeyboardInput();
         HandleMovementMouseInput();
+        HandleSelectableMouseOver();
         SelectionManager.instance.HandleIssueCommandsRightClick();
         SelectionManager.instance.HandleMouseSelectionInput();
     }
