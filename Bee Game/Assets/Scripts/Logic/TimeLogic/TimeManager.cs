@@ -3,9 +3,13 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum Season { Summer, Autumn, Winter, Spring}
+
 public class TimeManager : MonoBehaviour
 {
     public static TimeManager instance;
+
+    public List<TimeManagerObserver> observers;
 
     public bool seasonProgressed;
     public bool monthProgressed;
@@ -17,7 +21,7 @@ public class TimeManager : MonoBehaviour
 
     private double secondsElapsed;
     private double prevTime;
-    private int season;
+    private Season season;
     private int month;
     private int day;
 
@@ -42,9 +46,9 @@ public class TimeManager : MonoBehaviour
     }
 
     //0 for first season 3 for last
-    public int GetSeason()
+    public Season GetSeason()
     {
-        return ((date.Month-1)/3);
+        return (Season)((date.Month-1)/3);
     }
 
     //returns what percentage of the year has elapsed
@@ -99,7 +103,7 @@ public class TimeManager : MonoBehaviour
     {
         instance = this;
         date = new DateTime(1, 1, 1);
-        season = 0;
+        season = Season.Summer;
         month = 1;
         day = 1;
         timeScaleInt = 1;
@@ -121,6 +125,7 @@ public class TimeManager : MonoBehaviour
         {
             seasonProgressed = true;
             season = GetSeason();
+            NotifySeasonChange();
         }
         else
         {
@@ -131,6 +136,7 @@ public class TimeManager : MonoBehaviour
         {
             dayProgressed = true;
             day = GetDay();
+            NotifyDayChange();
         }
         else
         {
@@ -142,6 +148,44 @@ public class TimeManager : MonoBehaviour
         if (prevTime < (int)secondsElapsed)
         {
             date = date.AddDays(1);
+        }
+    }
+
+    private float SeasonProgress()
+    {
+        int monthsPreSeason = ((int)season) * 3;
+
+        float seasonLength = (DateTime.DaysInMonth(date.Year, monthsPreSeason+1) + 
+            DateTime.DaysInMonth(date.Year, monthsPreSeason + 2) + 
+            DateTime.DaysInMonth(date.Year, monthsPreSeason + 3));
+
+        int monthsIntoSeason = date.Month - monthsPreSeason;
+
+        float daysProgressed = date.Day;
+        for (int i=0; i < monthsIntoSeason-1; i++)
+        {
+            daysProgressed += DateTime.DaysInMonth(date.Year, monthsPreSeason + i + 1);
+        }
+
+
+
+        return daysProgressed/ seasonLength;
+        //DateTime.DaysInMonth
+    }
+
+    private void NotifySeasonChange()
+    {
+        foreach(TimeManagerObserver observer in observers)
+        {
+            observer.SeasonChanged(season);
+        }
+    }
+
+    private void NotifyDayChange()
+    {
+        foreach (TimeManagerObserver observer in observers)
+        {
+            observer.SeasonLerp(season, SeasonProgress());
         }
     }
 }

@@ -29,7 +29,7 @@ public class TimeUIManager : MonoBehaviour
 
     private void MonthProgress()
     {
-        int season = TimeManager.instance.GetSeason();
+        int season = (int)TimeManager.instance.GetSeason();
         seasonBlock.color = ColourData.instance.seasons[season];
         seasonBlockBlur.color = ColourData.instance.seasons[season];
         seasonBlock.transform.rotation = Quaternion.Euler(0, 0, season * -90);

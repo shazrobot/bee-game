@@ -38,14 +38,15 @@ vertexOutput tessVert(vertexInput v)
 }
 
 float _TessellationUniform;
+float _SeasonalTesselation; // equivalent of _TessellationUniform
 
 TessellationFactors patchConstantFunction (InputPatch<vertexInput, 3> patch)
 {
 	TessellationFactors f;
-	f.edge[0] = _TessellationUniform;
-	f.edge[1] = _TessellationUniform;
-	f.edge[2] = _TessellationUniform;
-	f.inside = _TessellationUniform;
+	f.edge[0] = _SeasonalTesselation;
+	f.edge[1] = _SeasonalTesselation;
+	f.edge[2] = _SeasonalTesselation;
+	f.inside = _SeasonalTesselation;
 	return f;
 }
 

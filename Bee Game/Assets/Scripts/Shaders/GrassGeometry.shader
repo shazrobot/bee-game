@@ -51,6 +51,12 @@ Shader "Custom/GrassGeometry"
 	uniform float3 _Position;
 	uniform sampler2D _GlobalEffectRT;
 	uniform float _OrthographicCamSize;
+	
+	//fluctuating seasonal variables
+	float _SeasonalGrassHeight; //equivalent of _BladeHeight
+	float _SeasonalGrassWidth; //equivalent of _BladeWidth
+	int _SeasonalGrassBend; //equivalent of _BladeForward
+
 
 	// Simple noise function, sourced from http://answers.unity.com/answers/624136/view.html
 	// Extended discussion on this function can be found at the following link:
@@ -134,47 +140,53 @@ Shader "Custom/GrassGeometry"
 
 		//float interactionBend = bendUV.y;//tex2D(_GlobalEffectRT, bendUV).b;
 
-		float interactionBend = tex2Dlod(_GlobalEffectRT, float4(bendUV, 0, 0)).b;
-
+		
+		float fertility = tex2Dlod(_GlobalEffectRT, float4(bendUV, 0, 0)).g;
 		//float preinteractionBendAmount = (rand(pos.zzx) * _BendRotationRandom);
-		float preinteractionBendAmount = _BendRotationRandom;
+		
+		if (fertility > 0) {
 
-		interactionBend = preinteractionBendAmount+ interactionBend > 0.9 ? 0.9 : (preinteractionBendAmount + interactionBend);
+			float interactionBend = tex2Dlod(_GlobalEffectRT, float4(bendUV, 0, 0)).b;
 
-		float3x3 facingRotationMatrix = AngleAxis3x3(rand(pos) * UNITY_TWO_PI, float3(0, 0, 1));
-		float3x3 bendRotationMatrix = AngleAxis3x3((interactionBend) * UNITY_PI * 0.5, float3(-1, 0, 0));
+			float preinteractionBendAmount = _BendRotationRandom;
 
-		float2 uv = pos.xz * _WindDistortionMap_ST.xy + _WindDistortionMap_ST.zw + _WindFrequency * _Time.y;
+			interactionBend = preinteractionBendAmount + interactionBend > 0.9 ? 0.9 : (preinteractionBendAmount + interactionBend);
 
-		float2 windSample = (tex2Dlod(_WindDistortionMap, float4(uv, 0, 0)).xy * 2 - 1) * _WindStrength;
-		float3 wind = normalize(float3(windSample.x, windSample.y, 0));
+			float3x3 facingRotationMatrix = AngleAxis3x3(rand(pos) * UNITY_TWO_PI, float3(0, 0, 1));
+			float3x3 bendRotationMatrix = AngleAxis3x3((interactionBend)*UNITY_PI * 0.5, float3(-1, 0, 0));
 
-		wind = preinteractionBendAmount  == interactionBend  ? wind : float3(0, 0, 0);
+			float2 uv = pos.xz * _WindDistortionMap_ST.xy + _WindDistortionMap_ST.zw + _WindFrequency * _Time.y;
 
-		float3x3 windRotation = AngleAxis3x3(UNITY_PI * windSample, wind);
+			float2 windSample = (tex2Dlod(_WindDistortionMap, float4(uv, 0, 0)).xy * 2 - 1) * _WindStrength;
+			float3 wind = normalize(float3(windSample.x, windSample.y, 0));
 
-		float3x3 transformationMatrix = mul(mul(mul(tangentToLocal, windRotation), facingRotationMatrix), bendRotationMatrix);
-		float3x3 transformationMatrixFacing = mul(tangentToLocal, facingRotationMatrix);
+			wind = preinteractionBendAmount == interactionBend ? wind : float3(0, 0, 0);
 
-		float height = (rand(pos.zyx) * 2 - 1) * _BladeHeightRandom + _BladeHeight;
-		float width = (rand(pos.xzy) * 2 - 1) * _BladeWidthRandom + _BladeWidth;
-		float forward = rand(pos.yyz) * _BladeForward;
+			float3x3 windRotation = AngleAxis3x3(UNITY_PI * windSample, wind);
 
-		for (int i = 0; i < BLADE_SEGMENTS; i++)
-		{
-			float t = i / (float)BLADE_SEGMENTS;
-			float segmentHeight = height * t;
-			float segmentWidth = width * (1 - t);
-			float segmentForward = pow(t, _BladeCurve) * forward;
+			float3x3 transformationMatrix = mul(mul(mul(tangentToLocal, windRotation), facingRotationMatrix), bendRotationMatrix);
+			float3x3 transformationMatrixFacing = mul(tangentToLocal, facingRotationMatrix);
 
-			float3x3 transformMatrix = i == 0 ? transformationMatrixFacing : transformationMatrix;
+			float height = (rand(pos.zyx) * 2 - 1) * _BladeHeightRandom + _SeasonalGrassHeight;
+			float width = (rand(pos.xzy) * 2 - 1) * _BladeWidthRandom + _SeasonalGrassWidth;
+			float forward = rand(pos.yyz) * _SeasonalGrassBend;
 
-			triStream.Append(GenerateGrassVertex(pos, segmentWidth, segmentHeight, segmentForward, float2(0, t), transformMatrix));
-			triStream.Append(GenerateGrassVertex(pos, -segmentWidth, segmentHeight, segmentForward, float2(1, t), transformMatrix));
+			for (int i = 0; i < BLADE_SEGMENTS; i++)
+			{
+				float t = i / (float)BLADE_SEGMENTS;
+				float segmentHeight = height * t;
+				float segmentWidth = width * (1 - t);
+				float segmentForward = pow(t, _BladeCurve) * forward;
 
+				float3x3 transformMatrix = i == 0 ? transformationMatrixFacing : transformationMatrix;
+
+				triStream.Append(GenerateGrassVertex(pos, segmentWidth, segmentHeight, segmentForward, float2(0, t), transformMatrix));
+				triStream.Append(GenerateGrassVertex(pos, -segmentWidth, segmentHeight, segmentForward, float2(1, t), transformMatrix));
+
+			}
+			triStream.Append(GenerateGrassVertex(pos, 0, height, forward, float2(0.5, 1), transformationMatrix));
 		}
-
-		triStream.Append(GenerateGrassVertex(pos, 0, height, forward, float2(0.5, 1), transformationMatrix));
+		
 	}
 
 	ENDCG
@@ -206,6 +218,9 @@ Shader "Custom/GrassGeometry"
 			float4 _BottomColor;
 			float _TranslucentGain;
 
+			float4 _SeasonalTopColour;
+			float4 _SeasonalBottomColour;
+
 			float4 frag(geometryOutput i, fixed facing : VFACE) : SV_Target
 			{
 				float3 normal = facing > 0 ? i.normal : -i.normal;
@@ -214,7 +229,7 @@ Shader "Custom/GrassGeometry"
 
 				float3 ambient = ShadeSH9(float4(normal, 1));
 				float4 lightIntensity = NdotL * _LightColor0 + float4(ambient, 1);
-				float4 col = lerp(_BottomColor * lightIntensity, _TopColor * lightIntensity, i.uv.y);
+				float4 col = lerp(_SeasonalBottomColour * lightIntensity, _SeasonalTopColour * lightIntensity, i.uv.y);
 
 				return col;
 			}
