@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public abstract class PlayerObserver : MonoBehaviour
+public abstract class FactionObserver : MonoBehaviour
 {
-    public abstract void PlayerUpdated();
+    public abstract void FactionUpdated(FactionLogic faction);
 }

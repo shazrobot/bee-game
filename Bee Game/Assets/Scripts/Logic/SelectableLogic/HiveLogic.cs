@@ -8,10 +8,10 @@ public class HiveLogic : SelectableLogic
     public MeshRenderer modelMesh;
 
 
-    public CreatureLogic beeTemplate;
+    
 
     [SerializeField]
-    private Transform rallyPoint;
+    public Transform rallyPoint;
 
     [NonSerialized]
     public int beeQueue = 0;
@@ -21,23 +21,29 @@ public class HiveLogic : SelectableLogic
     [NonSerialized]
     public float beeConstructionTime = 30f;
 
+    private FactionLogic faction;
+
+    [SerializeField]
+    private MeshRenderer meshRenderer;
 
     protected override void Awake()
     {
-        beeTemplate.gameObject.SetActive(false);
         base.Awake();
+    }
+
+    public void SetCreationVariables(FactionLogic fact, Material material)
+    {
+        faction = fact;
+        meshRenderer.material = material;
     }
 
     public void BuildBee()//Build bee
     {
-        CreatureLogic bee = Instantiate(beeTemplate) as CreatureLogic;
-
-        bee.gameObject.SetActive(true);
-        bee.transform.SetParent(beeTemplate.transform.parent);
-        bee.transform.position = transform.position;
-        bee.EnqueueGoal(new MoveCommand(MoveType.Move, rallyPoint.position));
-        beeQueue -= 1;
-        ResetTimer();
+        if (faction.CreateBee(this))
+        {
+            beeQueue -= 1;
+            ResetTimer();
+        }
     }
 
     private void ResetTimer()
@@ -47,12 +53,13 @@ public class HiveLogic : SelectableLogic
 
     public bool QueueBeeBuild()
     {
-        if(beeQueue == 6)
+        if(beeQueue == 6 || !faction.CanAffordBee())
         {
             return false;
         }
         else
         {
+            faction.BeeQueued();
             beeQueue += 1;
             return true;
         }

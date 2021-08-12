@@ -23,6 +23,8 @@ Shader "Custom/GrassGeometry"
 
 		_BladeForward("Blade Forward Amount", Float) = 0.38
 		_BladeCurve("Blade Curvature Amount", Range(1, 4)) = 2
+
+		//_FertilityFitler("Fertility Filter Active", Boolean) = true
 	}
 
 	CGINCLUDE
@@ -31,7 +33,8 @@ Shader "Custom/GrassGeometry"
 	#include "CustomTessellation.cginc"
 
 	#define BLADE_SEGMENTS 3
-	
+	//#pragma multi_compile_fog
+
 	float _BendRotationRandom;
 
 	float _BladeHeight;
@@ -51,6 +54,8 @@ Shader "Custom/GrassGeometry"
 	uniform float3 _Position;
 	uniform sampler2D _GlobalEffectRT;
 	uniform float _OrthographicCamSize;
+
+	//bool _FertilityFitler;
 	
 	//fluctuating seasonal variables
 	float _SeasonalGrassHeight; //equivalent of _BladeHeight
@@ -92,6 +97,7 @@ Shader "Custom/GrassGeometry"
 		unityShadowCoord4 _ShadowCoord : TEXCOORD1;
 		float4 pos : SV_POSITION;
 		float3 normal : NORMAL;
+		//UNITY_FOG_COORDS(2)
 	};
 
 	geometryOutput VertexOutput(float3 pos, float2 uv, float3 normal)
@@ -105,6 +111,9 @@ Shader "Custom/GrassGeometry"
 				// Applying the bias prevents artifacts from appearing on the surface.
 				o.pos = UnityApplyLinearShadowBias(o.pos);
 		#endif
+
+		//UNITY_TRANSFER_FOG(o, o.vertex);
+
 		return o;
 	}
 
@@ -116,6 +125,7 @@ Shader "Custom/GrassGeometry"
 		float3 localNormal = mul(transformMatrix, tangentNormal);
 
 		float3 localPosition = vertexPosition + mul(transformMatrix, tangentPoint);
+
 		return VertexOutput(localPosition, uv, localNormal);
 	}
 
@@ -142,9 +152,10 @@ Shader "Custom/GrassGeometry"
 
 		
 		float fertility = tex2Dlod(_GlobalEffectRT, float4(bendUV, 0, 0)).g;
+		float obstruction = tex2Dlod(_GlobalEffectRT, float4(bendUV, 0, 0)).r;
 		//float preinteractionBendAmount = (rand(pos.zzx) * _BendRotationRandom);
 		
-		if (fertility > 0) {
+		if ((fertility > 0)&&(obstruction <=0 )){//||(!_FertilityFitler)) {
 
 			float interactionBend = tex2Dlod(_GlobalEffectRT, float4(bendUV, 0, 0)).b;
 
@@ -230,6 +241,8 @@ Shader "Custom/GrassGeometry"
 				float3 ambient = ShadeSH9(float4(normal, 1));
 				float4 lightIntensity = NdotL * _LightColor0 + float4(ambient, 1);
 				float4 col = lerp(_SeasonalBottomColour * lightIntensity, _SeasonalTopColour * lightIntensity, i.uv.y);
+
+				//UNITY_APPLY_FOG(i.fogCoord, col);
 
 				return col;
 			}

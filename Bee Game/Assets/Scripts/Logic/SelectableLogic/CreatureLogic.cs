@@ -12,23 +12,40 @@ public class CreatureLogic : SelectableLogic
     //Gathering Data
     public float gatherTime = 10f;
     private float gatherTimer = 0f;
-    private bool gathering = false;
+    [SerializeField]
+    private PlantLogic gatherFrom = null;
     private int pollenGathered = 0;
     private int pollenMax = 100;
 
+    //
+
+
+    private FactionLogic faction;
+
+    [SerializeField]
+    private SkinnedMeshRenderer meshRenderer;
 
     protected override void Awake()
     {
         base.Awake();
     }
 
-    
+    //
+    public void SetCreationVariables(FactionLogic fact, Material material)
+    {
+        faction = fact;
+        meshRenderer.material = material;
+    }
 
     //Command Logic
 
     //Clears all previous commands and sets current one to given command
     public void ResetCommandsToThis(MoveCommand goal)
     {
+        //clear any gathering commands
+        ResetGathering();
+        //probably good to tell a plant it is no longer being gathered from by the pollinator
+
         moveCommands.Clear();
         moveCommands.Add(goal);
     }
@@ -54,6 +71,14 @@ public class CreatureLogic : SelectableLogic
         }
     }
 
+    private void ReplaceCurrentGoal(MoveCommand goal)
+    {
+        if (moveCommands.Count >= 1)
+        {
+            moveCommands[0] = goal;
+        }
+    }
+
     private void UpdateCommands()
     {
         if (moveCommands.Count > 0)
@@ -72,7 +97,7 @@ public class CreatureLogic : SelectableLogic
                 }
                 else if (moveCommands[0].moveType == MoveType.DropOffResources)
                 {
-                    DeliverResources();
+                    DeliverResources(moveCommands[0].objective);
                 }
             }
             
@@ -88,15 +113,31 @@ public class CreatureLogic : SelectableLogic
 
     private void GatherResources(GameObject objective)
     {
+        
         PlantLogic plant = objective.GetComponent<PlantLogic>();
-
-        //if you haven't started gathering stuff start it now
-        if (!gathering)
+        
+        if (!plant.IsBeingPollinated() && plant.HasPollen()) //if the plant is available, and has pollen, start gathering from it,
         {
             gatherTimer = 0f;
-            gathering = true;
+            gatherFrom = plant;
+            plant.InitiatePollination(this);
         }
-        if (plant.HasPollen())
+        else if (plant != gatherFrom)
+        {
+            PlantLogic closetEligble = EcosystemLogic.instance.ClosestGatherablePlant(transform.position);
+            if(closetEligble != null)//otherwise, look for a new plant
+            {
+                ReplaceCurrentGoal(new MoveCommand(MoveType.Gather, Vector3.zero, closetEligble.gameObject));
+            }
+            else
+            {
+                FinishGathering();
+            }
+            //if no new plants, then just hang out here until new command is given, or t he plant becomes available
+        }
+        
+
+        if (plant.IsThePollinator(this) && gatherFrom == plant)
         {
             if (PollenFull())
             {
@@ -109,11 +150,6 @@ public class CreatureLogic : SelectableLogic
                 CollectPollen(plant);
                 FinishGathering();
             }
-        }
-        else
-        {
-            //if theres nothing left in plant, abort gathering further
-            FinishGathering();
         }
         
     }
@@ -130,7 +166,7 @@ public class CreatureLogic : SelectableLogic
         DequeueGoal();
         if (commands == 1)
         {
-            HiveLogic goal = PlayerLogic.instance.ClosestHive(transform.position);
+            HiveLogic goal = faction.ClosestHive(transform.position);
             if (goal != null)
             {
                 EnqueueGoal(new MoveCommand(MoveType.DropOffResources, Vector3.zero, goal.gameObject));
@@ -141,16 +177,21 @@ public class CreatureLogic : SelectableLogic
     private void ResetGathering()
     {
         gatherTimer = 0f;
-        gathering = false;
+        if(gatherFrom != null)
+        {
+            gatherFrom.HaltPollination();
+        }
+        gatherFrom = null;
+
     }
 
     //Delivery Logic
 
-    private void DeliverResources()
+    private void DeliverResources(GameObject objective)
     {
-        //HiveLogic hive = objective.GetComponent<HiveLogic>();
+        HiveLogic hive = objective.GetComponent<HiveLogic>();
 
-        PlayerLogic.instance.UpdatePollenAmount(pollenGathered);
+        faction.UpdatePollenAmount(pollenGathered);
         pollenGathered = 0;
 
         int commands = moveCommands.Count;
@@ -161,7 +202,12 @@ public class CreatureLogic : SelectableLogic
             if(goal != null)
             {
                 EnqueueGoal(new MoveCommand(MoveType.Gather, Vector3.zero, goal.gameObject));
-            }            
+            }
+            else
+            {
+                EnqueueGoal(new MoveCommand(MoveType.Move, hive.rallyPoint.position));
+            }
+            //else move command to rally point
         }
     }
 

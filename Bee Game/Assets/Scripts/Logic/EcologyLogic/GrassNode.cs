@@ -20,17 +20,8 @@ public class GrassNode : MonoBehaviour
     private bool choked = false;
 
 
-    //Good to replace this with a map static class which has map data
-    [SerializeField]
-    private float xMax = 200;
-    [SerializeField]
-    private float xMin = -200;
-    [SerializeField]
-    private float zMax = 200;
-    [SerializeField]
-    private float zMin = -200;
-
-
+    private float localDistance = 20f;
+    private Vector3 localMeanPos = new Vector3();
 
     public Vector3 Reproduce(List<GrassNode> grasses)
     {
@@ -38,11 +29,27 @@ public class GrassNode : MonoBehaviour
         {
             if (!IsChokedTest(grasses))
             {
+                //int xdirection = (Random.Range(-1, 2) > 0) ? -1 : 1;
+                //float xpos = xdirection*Random.Range(chokeDistance, reproductionDistance);
+                //int zdirection = (Random.Range(-1, 2) > 0) ? -1 : 1;
+                //float zpos = zdirection * Random.Range(chokeDistance, reproductionDistance);
+
                 int xdirection = (Random.Range(-1, 2) > 0) ? -1 : 1;
                 float xpos = xdirection*Random.Range(chokeDistance, reproductionDistance);
                 int zdirection = (Random.Range(-1, 2) > 0) ? -1 : 1;
                 float zpos = zdirection * Random.Range(chokeDistance, reproductionDistance);
-                return new Vector3(transform.position.x+xpos, transform.position.y, transform.position.z+zpos);
+
+                //find local position, then create a vector using from local mean towards your position, normalise, then 10x away
+                //add some randomness;
+
+                localMeanPos = FindLocalMeanPos(grasses);
+
+                Vector3 bearing = reproductionDistance * Vector3.Normalize(transform.position-localMeanPos);
+
+                bearing = new Vector3(bearing.x+ (xpos/4f), bearing.y, bearing.z+ (zpos/4f));
+
+                //return new Vector3(transform.position.x+xpos, transform.position.y, transform.position.z+zpos);
+                return new Vector3(transform.position.x + bearing.x, transform.position.y, transform.position.z + bearing.z);
             }
             else
             {
@@ -59,17 +66,26 @@ public class GrassNode : MonoBehaviour
         return choked;
     }
 
-    private bool OutOfBounds()
+    private Vector3 FindLocalMeanPos(List<GrassNode> grasses)
     {
-        return ((transform.position.x < xMax) &&
-            (transform.position.x > xMin) &&
-            (transform.position.z < zMax) &&
-            (transform.position.z > zMin));
+        float localNum = 0;
+        Vector3 totals = new Vector3();
+        foreach (GrassNode grass in grasses)
+        {
+            if (Vector3.Distance(grass.transform.position, transform.position) < localDistance)
+            {
+                localNum++;
+                totals += grass.transform.position;
+            }
+        }
+
+        return new Vector3(totals.x/ localNum, totals.y/ localNum, totals.z/ localNum);
     }
 
     private bool IsChokedTest(List<GrassNode> grasses)
     {
-        if (!OutOfBounds())
+
+        if (EcosystemLogic.instance.IsOutOfBounds(transform.position))
             return true;
 
         int chokeCounter = 0;
@@ -80,7 +96,7 @@ public class GrassNode : MonoBehaviour
                 chokeCounter += 1;
                 if (chokeCounter >= chokeCount)
                     return true;
-            }            
+            }
         }
         return false;
     }

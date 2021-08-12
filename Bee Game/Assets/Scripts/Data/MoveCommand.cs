@@ -26,6 +26,10 @@ public struct MoveCommand
         }
         else
         {
+            if(objective.GetComponent<SelectableLogic>() != null)
+            {
+                return objective.GetComponent<SelectableLogic>().GetUIPosition().position;
+            }
             return objective.transform.position;
         }
     }

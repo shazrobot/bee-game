@@ -13,7 +13,12 @@ public class MovementLogic
 
     private static void LookTowards(Transform trans, Vector3 bearing)
     {
-        Vector3 newDirection = Vector3.RotateTowards(trans.forward, -bearing, 1f, 0f);
+        Vector3 lookDir = bearing;
+        lookDir.y = 0;
+
+        Vector3 newDirection = Vector3.RotateTowards(trans.forward, -lookDir, 1f, 0f);
+
+
         trans.rotation = Quaternion.LookRotation(newDirection);
     }
 

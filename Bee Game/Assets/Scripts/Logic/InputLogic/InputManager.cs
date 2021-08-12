@@ -14,6 +14,7 @@ public class InputManager : MonoBehaviour
     private RaycastHit rayHit;
     private float maxRayDistance = 1000.0f;
 
+    public bool buildMode = false;
 
     // Start is called before the first frame update
     void Start()
@@ -101,10 +102,17 @@ public class InputManager : MonoBehaviour
     {
         HandleMovementKeyboardInput();
         HandleMovementMouseInput();
-        HandleSelectableMouseOver();
-        SelectionManager.instance.HandleIssueCommandsRightClick();
-        SelectionManager.instance.HandleMouseSelectionInput();
+        HandleSelectableMouseOver();//this might be worth putting into selection manager
+        if (!buildMode)
+        {
+            SelectionManager.instance.HandleIssueCommandsRightClick();
+            SelectionManager.instance.HandleMouseSelectionInput();
+        }
+        else
+        {
+            BuildManager.instance.HandleMouseLeftClick();
+            BuildManager.instance.HandleMouseRightClick();
+        }
+        
     }
-
-
 }

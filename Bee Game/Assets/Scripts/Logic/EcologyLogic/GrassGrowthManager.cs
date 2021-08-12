@@ -13,12 +13,25 @@ public class GrassGrowthManager : MonoBehaviour
 
     private List<GrassNode> nonChokedGrasses = new List<GrassNode>();
 
+    //Manually defined for current scale of 2 with current sprite
+    private int GrassNodeRadius = 9;
 
     // Start is called before the first frame update
     void Start()
     {
         grassTemplate.gameObject.SetActive(false);
         nonChokedGrasses.AddRange(allGrasses);
+    }
+
+    public bool WithinRangeOfGrass(Vector3 testPosition)
+    {
+        foreach(GrassNode grass in allGrasses)
+        {
+            Vector3 grassPos = new Vector3(grass.transform.position.x, testPosition.y, grass.transform.position.z);
+            if (Vector3.Distance(grassPos, testPosition) <= GrassNodeRadius)
+                return true;
+        }
+        return false;
     }
 
     public void createNewGrass(Vector3 position)
@@ -58,7 +71,7 @@ public class GrassGrowthManager : MonoBehaviour
         {
             createNewGrass(position);
         }
-        Debug.Log("Attempts: " + tempCounter + " many grass nodes tried to reproduce");
-        Debug.Log("created: "+newPositions.Count+" many grass nodes successfully reproduced");
+        //Debug.Log("Attempts: " + tempCounter + " many grass nodes tried to reproduce");
+        //Debug.Log("created: "+newPositions.Count+" many grass nodes successfully reproduced");
     }
 }

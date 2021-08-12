@@ -24,6 +24,8 @@
 
             #include "UnityCG.cginc"
 
+             #pragma multi_compile_fog
+
             struct appdata
             {
                 float4 vertex : POSITION;
@@ -36,6 +38,7 @@
                 float4 screenPosition : TEXCOORD2;
                 float2 noiseUV : TEXCOORD0;
                 float2 distortUV : TEXCOORD1;
+                UNITY_FOG_COORDS(3)
             };
 
             sampler2D _SurfaceNoise;
@@ -55,6 +58,7 @@
                 o.screenPosition = ComputeScreenPos(o.vertex);
                 o.noiseUV = TRANSFORM_TEX(v.uv, _SurfaceNoise);
                 o.distortUV = TRANSFORM_TEX(v.uv, _SurfaceDistortion);
+                UNITY_TRANSFER_FOG(o, o.vertex);
                 return o;
             }
 
@@ -89,8 +93,11 @@
 
                 float surfaceNoise = smoothstep(surfaceNoiseCutoff - SMOOTHSTEP_AA, surfaceNoiseCutoff + SMOOTHSTEP_AA, surfaceNoiseSample);
 
+                float4 col = waterColor + surfaceNoise;
 
-                return waterColor + surfaceNoise;
+                UNITY_APPLY_FOG(i.fogCoord, col);
+
+                return col;
             }
             ENDCG
         }

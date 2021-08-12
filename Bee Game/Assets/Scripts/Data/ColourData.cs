@@ -20,6 +20,8 @@ public class ColourData : MonoBehaviour
     public Color springTopGrass;
     public Color springBottomGrass;
 
+    public Material GrowthMaskMaterial;
+
     private void Awake()
     {
         instance = this;

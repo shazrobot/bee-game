@@ -17,6 +17,7 @@ public class SelectionManager : MonoBehaviour
 
     public List<CreatureLogic> SelectedUnits = new List<CreatureLogic>();
     public HiveLogic SelectedHives = null;
+    public List<PlantLogic> SelectedPlants = new List<PlantLogic>();
 
     private Plane rayDetectionPlane;
     private Ray ray;
@@ -36,6 +37,7 @@ public class SelectionManager : MonoBehaviour
 
 
     // Start is called before the first frame update
+
     void Start()
     {
         instance = this;
@@ -70,6 +72,7 @@ public class SelectionManager : MonoBehaviour
             selectionCurrentPosition = Input.mousePosition;
 
             DeselectSelectedHives();
+            DeselectSelectedPlants();
             if (!(Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)))
             {
                 DeselectSelectedUnits();
@@ -91,15 +94,22 @@ public class SelectionManager : MonoBehaviour
                     if (rayHit.collider.gameObject.GetComponent<HiveLogic>() != null) //Hive select
                     {
                         HiveLogic hive = rayHit.collider.gameObject.GetComponent<HiveLogic>();
-
+                        DeselectSelectedUnits();
                         SelectHive(hive);
+                    }
+
+                    if (rayHit.collider.gameObject.GetComponent<PlantLogic>() != null) //Hive select
+                    {
+                        PlantLogic plant = rayHit.collider.gameObject.GetComponent<PlantLogic>();
+                        DeselectSelectedUnits();
+                        SelectPlant(plant);
                     }
                 }
 
             }
             else // Drag select
             {
-                List<CreatureLogic> selecteables = new List<CreatureLogic>(GameObject.FindObjectsOfType<CreatureLogic>());
+                List<CreatureLogic> selecteables = new List<CreatureLogic>(FindObjectsOfType<CreatureLogic>());
                 Vector3 point = Vector3.zero;
 
                 foreach (CreatureLogic creature in selecteables)
@@ -301,15 +311,23 @@ public class SelectionManager : MonoBehaviour
         return false;
     }
 
+    private void DeselectAll()
+    {
+        DeselectSelectedHives();
+        DeselectSelectedPlants();
+        DeselectSelectedUnits();
+    }
+
     private void DeselectSelectedUnits()
     {
         foreach (CreatureLogic creature in SelectedUnits)
         {
             creature.Deselect();
+            SelectionSpriteLogic.instance.RemoveSelectedObject(creature);
         }
         SelectedUnits.Clear();
         DisplaySelectedRallyPoints();
-        SelectionSpriteLogic.instance.SetSelectedObjects(new List<SelectableLogic>(SelectedUnits));
+        //SelectionSpriteLogic.instance.SetSelectedObjects(new List<SelectableLogic>(SelectedUnits));
     }
 
     private bool SelectHive(HiveLogic hive)
@@ -335,5 +353,35 @@ public class SelectionManager : MonoBehaviour
             SelectedHives = null;
         }
         HiveUILogic.instance.SelectHive();
+    }
+
+    private bool SelectPlant(PlantLogic plant)
+    {
+        if (!plant.IsSelected())
+        {
+            SelectedUILogic.instance.Select(plant);
+            plant.Select();
+            SelectedPlants.Add(plant);
+            SelectionSpriteLogic.instance.AddSelectedObject(plant);
+            return true;
+        }
+        return false;
+    }
+
+    private void DeselectSelectedPlants()
+    {
+        foreach (PlantLogic plant in SelectedPlants)
+        {
+            plant.Deselect();
+            SelectionSpriteLogic.instance.RemoveSelectedObject(plant);
+        }
+        SelectedUILogic.instance.Deselect();
+        SelectedPlants.Clear();
+        //SelectionSpriteLogic.instance.SetSelectedObjects(new List<SelectableLogic>(SelectedPlants));
+    }
+
+    public void ExitSelectionMode()
+    {
+        DeselectAll();
     }
 }
