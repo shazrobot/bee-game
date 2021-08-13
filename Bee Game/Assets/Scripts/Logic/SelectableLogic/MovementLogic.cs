@@ -4,11 +4,9 @@ using UnityEngine;
 
 public class MovementLogic
 {
-    private static float distanceCheck = .5f;
-
-    private static bool DistanceCheck(Transform trans, Vector3 destination)
+    private static bool DistanceCheck(Transform trans, Vector3 destination, float distanceThreshold)
     {
-        return (Vector3.Distance(trans.position, destination) < distanceCheck);
+        return (Vector3.Distance(trans.position, destination) < distanceThreshold);
     }
 
     private static void LookTowards(Transform trans, Vector3 bearing)
@@ -25,12 +23,22 @@ public class MovementLogic
     public static void MoveTowards(Transform trans, float moveSpeed, Vector3 destination)
     {
         Vector3 bearing = Vector3.Normalize(destination - trans.position);
-        trans.position += bearing * moveSpeed * Time.deltaTime;
+
+        if(Vector3.Distance(destination, trans.position) < moveSpeed * Time.deltaTime)
+        {
+            Debug.Log("close enough to slow down");
+            trans.position += bearing * Vector3.Distance(destination, trans.position);
+        }
+        else
+        {
+
+            trans.position += bearing * moveSpeed * Time.deltaTime;
+        }
         LookTowards(trans, bearing);
     }
 
-    public static bool ReachedDestination(Transform trans, Vector3 destination)
+    public static bool ReachedDestination(Transform trans, Vector3 destination, float distanceThreshold)
     {
-        return DistanceCheck(trans, destination);
+        return DistanceCheck(trans, destination, distanceThreshold);
     }     
 }

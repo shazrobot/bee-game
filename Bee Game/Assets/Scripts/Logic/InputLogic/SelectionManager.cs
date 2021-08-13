@@ -152,8 +152,32 @@ public class SelectionManager : MonoBehaviour
                 else if (rayHit.collider.gameObject.GetComponent<HiveLogic>() != null)
                 {
                     HiveLogic hive = rayHit.collider.gameObject.GetComponent<HiveLogic>();
+                    if (PlayerLogic.instance.factionLogic.IsEnemy(hive.GetFaction()))
+                    {
+                        IssueAttackCommand(hive);
+                    }
+                    else if(PlayerLogic.instance.factionLogic == hive.GetFaction())
+                    {
+                        IssueDeliverCommand(hive);
+                    }                    
+                }
+                else if (rayHit.collider.gameObject.GetComponent<CreatureLogic>() != null)
+                {
+                    CreatureLogic bee = rayHit.collider.gameObject.GetComponent<CreatureLogic>();
 
-                    IssueDeliverCommand(hive);
+                    if (PlayerLogic.instance.factionLogic.IsEnemy(bee.GetFaction()))
+                    {
+                        IssueAttackCommand(bee);
+                    }
+                    else
+                    {
+                        float collision;
+                        if (rayDetectionPlane.Raycast(ray, out collision))
+                        {
+                            heightAdjustStartPosition = ray.GetPoint(collision);
+                            rightClickInitiated = true;
+                        }
+                    }
                 }
                 else
                 {
@@ -272,6 +296,25 @@ public class SelectionManager : MonoBehaviour
             foreach (CreatureLogic creature in SelectedUnits)
             {
                 creature.ResetCommandsToThis(new MoveCommand(MoveType.DropOffResources, Vector3.zero, hive.gameObject));
+            }
+        }
+        DisplaySelectedRallyPoints();
+    }
+
+    private void IssueAttackCommand(SelectableLogic selectable)
+    {
+        if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+        {
+            foreach (CreatureLogic creature in SelectedUnits)
+            {
+                creature.EnqueueGoal(new MoveCommand(MoveType.Attack, Vector3.zero, selectable.gameObject));
+            }
+        }
+        else
+        {
+            foreach (CreatureLogic creature in SelectedUnits)
+            {
+                creature.ResetCommandsToThis(new MoveCommand(MoveType.Attack, Vector3.zero, selectable.gameObject));
             }
         }
         DisplaySelectedRallyPoints();

@@ -16,19 +16,36 @@ public class FactionLogic : MonoBehaviour
 
     public CreatureLogic beeTemplate;
 
+    public HiveLogic hiveTemplate;
+
     public int BeePollenCost = 500;
+
+    public int HivePollenCost = 1000;
+
+    [SerializeField]
+    private Color factionColour;
 
     [SerializeField]
     private Material beeMaterial;
     [SerializeField]
     private Material hiveMaterial;
 
+    public List<FactionLogic> enemyFactions;
+
+    //public List<FactionLogic> 
+
     private void Start()
     {
         beeTemplate.gameObject.SetActive(false);
+        hiveTemplate.gameObject.SetActive(false);
         NotifyObservers();
         StartupHiveFactionUpdate();
         StartupBeeFactionUpdate();
+    }
+
+    public Color GetFactionColour()
+    {
+        return factionColour;
     }
 
     private void StartupHiveFactionUpdate()
@@ -58,6 +75,11 @@ public class FactionLogic : MonoBehaviour
         return (pollenAmount >= BeePollenCost);
     }
 
+    public bool CanAffordHive()
+    {
+        return (pollenAmount >= HivePollenCost);
+    }
+
     public void BeeQueued()
     {
         pollenAmount -= BeePollenCost;
@@ -74,8 +96,26 @@ public class FactionLogic : MonoBehaviour
         bee.transform.position = hive.transform.position;
         bee.EnqueueGoal(new MoveCommand(MoveType.Move, hive.rallyPoint.position));
 
+        bees.Add(bee);
         //only create bee if you can afford it
         return true;
+    }
+
+    public void CreateHive(HiveBuildLocation location)
+    {
+        pollenAmount -= HivePollenCost;
+        NotifyObservers();
+
+        HiveLogic hive = Instantiate(hiveTemplate) as HiveLogic;
+
+        hive.gameObject.SetActive(true);
+        hive.SetCreationVariables(this, hiveMaterial);
+        hive.transform.SetParent(beeTemplate.transform.parent);
+        hive.transform.position = location.transform.position;
+
+        hives.Add(hive);
+
+        location.Occupy();
     }
 
     public HiveLogic ClosestHive(Vector3 position)
@@ -109,4 +149,29 @@ public class FactionLogic : MonoBehaviour
         }
     }
 
+    public bool IsEnemy(FactionLogic faction)
+    {
+        return enemyFactions.Contains(faction);
+    }
+
+    public List<SelectableLogic> GetAliveEnemyUnits()
+    {
+        List<SelectableLogic> enemyUnits = new List<SelectableLogic>();
+
+        foreach (FactionLogic faction in enemyFactions)
+        {
+            foreach(CreatureLogic bee in faction.bees)
+            {
+                if(!bee.IsDead() && bee.isActiveAndEnabled)
+                    enemyUnits.Add(bee);
+            }
+            foreach (HiveLogic hive in faction.hives)
+            {
+                if (!hive.IsDead() && hive.isActiveAndEnabled)
+                    enemyUnits.Add(hive);
+            }
+        }
+
+        return enemyUnits;
+    }
 }

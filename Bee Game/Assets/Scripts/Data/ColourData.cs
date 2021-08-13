@@ -20,6 +20,10 @@ public class ColourData : MonoBehaviour
     public Color springTopGrass;
     public Color springBottomGrass;
 
+    public Color friendly;
+    public Color hostile;
+    public Color neutral;
+
     public Material GrowthMaskMaterial;
 
     private void Awake()

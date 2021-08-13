@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -16,11 +17,17 @@ public class CreatureLogic : SelectableLogic
     private PlantLogic gatherFrom = null;
     private int pollenGathered = 0;
     private int pollenMax = 100;
+    [SerializeField]
+    private int attack = 20;
 
-    //
+    private float attackCooldownCounter = 0f;
+    private float attackCooldown = 2f;
 
+    private float aggroRange = 50f;
 
     private FactionLogic faction;
+
+    private float distanceThreshold = 5f;
 
     [SerializeField]
     private SkinnedMeshRenderer meshRenderer;
@@ -35,6 +42,11 @@ public class CreatureLogic : SelectableLogic
     {
         faction = fact;
         meshRenderer.material = material;
+    }
+
+    public FactionLogic GetFaction()
+    {
+        return faction;
     }
 
     //Command Logic
@@ -83,7 +95,7 @@ public class CreatureLogic : SelectableLogic
     {
         if (moveCommands.Count > 0)
         {
-            if (!MovementLogic.ReachedDestination(transform, moveCommands[0].GetDestination()))
+            if (!MovementLogic.ReachedDestination(transform, moveCommands[0].GetDestination(), distanceThreshold))
             {
                 MovementLogic.MoveTowards(transform, moveSpeed, moveCommands[0].GetDestination());
             }
@@ -99,9 +111,26 @@ public class CreatureLogic : SelectableLogic
                 {
                     DeliverResources(moveCommands[0].objective);
                 }
+                else if (moveCommands[0].moveType == MoveType.Attack)
+                {
+                    AttackObjective(moveCommands[0].objective);
+                }
             }
-            
         }
+
+        if(moveCommands.Count == 0)
+        {
+            CheckForNearbyEnemies();
+        }
+
+
+        if (attackCooldownCounter > 0)
+        {
+            attackCooldownCounter -= Time.deltaTime;
+            if (attackCooldownCounter < 0)
+                attackCooldownCounter = 0f;
+        }
+        //if idle, you could spread yourself out, or check for enemies
     }
 
     //Gathering Logic
@@ -211,9 +240,65 @@ public class CreatureLogic : SelectableLogic
         }
     }
 
-    public void Update()
+    private void CheckForNearbyEnemies()
+    {
+        SelectableLogic closestUnit = null;
+        float unitDist = Mathf.Infinity;
+        foreach(SelectableLogic unit in faction.GetAliveEnemyUnits())
+        {
+            float dist = Vector3.Distance(transform.position, unit.transform.position);
+            if ((dist < aggroRange) && (dist < unitDist))
+            {
+                unitDist = dist;
+                closestUnit = unit;
+            }
+        }
+
+        if(closestUnit != null)
+        {
+            if(closestUnit.GetComponent<HiveLogic>() != null)
+                Debug.Log("attacking hive");
+            if (closestUnit.GetComponent<CreatureLogic>() != null)
+                Debug.Log("attacking bee");
+            EnqueueGoal(new MoveCommand(MoveType.Attack, Vector3.zero, closestUnit.gameObject));
+        }
+    }
+
+    //Attack Logic
+
+    private void AttackObjective(GameObject objective)
+    {
+        SelectableLogic selectable = objective.GetComponent<SelectableLogic>();
+
+        if (attackCooldownCounter <= 0)
+        {
+            selectable.ChangeHealth(-attack);
+            attackCooldownCounter = attackCooldown;
+        }
+
+        if (selectable.IsDead())
+        {
+            DequeueGoal();
+        }
+    }
+
+    public void FixedUpdate()
     {
         UpdateCommands();
     }
 
+
+    public override void ChangeHealth(int healthChange)
+    {
+        currentHealth += healthChange;
+        if (currentHealth > maxHealth)
+            currentHealth = maxHealth;
+        else if (currentHealth <= 0)
+        {
+            ResetGathering();
+            currentHealth = 0;
+            dead = true;
+            gameObject.SetActive(false);
+        }
+    } 
 }

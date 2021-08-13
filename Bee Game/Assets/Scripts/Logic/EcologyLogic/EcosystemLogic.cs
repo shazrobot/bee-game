@@ -12,7 +12,7 @@ public class EcosystemLogic : TimeManagerObserver
 
     public GrassGrowthManager grassGrowthManager;
 
-
+    public List<HiveBuildLocation> hiveBuildLocations = new List<HiveBuildLocation>();
 
     //Blade height
     private float grassHeight = 5f; //between 1.5 and 5
@@ -51,6 +51,14 @@ public class EcosystemLogic : TimeManagerObserver
 
         Vector3 testPosition = new Vector3();
 
+    }
+
+    public void AddHiveBuildLocation(HiveBuildLocation buildLocation)
+    {
+        if (!hiveBuildLocations.Contains(buildLocation))
+        {
+            hiveBuildLocations.Add(buildLocation);
+        }
     }
 
 

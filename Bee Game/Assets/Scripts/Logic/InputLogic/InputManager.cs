@@ -96,20 +96,35 @@ public class InputManager : MonoBehaviour
         MouseOverSpriteLogic.instance.SetTarget();
     }
 
+    public void EnterBuildMode()
+    {
+        if (PlayerLogic.instance.factionLogic.CanAffordHive())
+        {
+            buildMode = true;
+            BuildManager.instance.EnterBuildMode();
+            SelectionManager.instance.ExitSelectionMode();
+        }
+    }
+
+    public void ExitBuildMode()
+    {
+        buildMode = false;
+    }
 
     // Update is called once per frame
     void Update()
     {
         HandleMovementKeyboardInput();
         HandleMovementMouseInput();
-        HandleSelectableMouseOver();//this might be worth putting into selection manager
         if (!buildMode)
         {
             SelectionManager.instance.HandleIssueCommandsRightClick();
             SelectionManager.instance.HandleMouseSelectionInput();
+            HandleSelectableMouseOver();
         }
         else
         {
+            BuildManager.instance.HandleMouseOver();
             BuildManager.instance.HandleMouseLeftClick();
             BuildManager.instance.HandleMouseRightClick();
         }

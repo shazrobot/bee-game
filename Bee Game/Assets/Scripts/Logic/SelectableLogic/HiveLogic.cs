@@ -31,6 +31,11 @@ public class HiveLogic : SelectableLogic
         base.Awake();
     }
 
+    public FactionLogic GetFaction()
+    {
+        return faction;
+    }
+
     public void SetCreationVariables(FactionLogic fact, Material material)
     {
         faction = fact;
@@ -77,7 +82,7 @@ public class HiveLogic : SelectableLogic
         }
     }
 
-    public void Update()
+    public void FixedUpdate()
     {
         IncrementTime();
     }
