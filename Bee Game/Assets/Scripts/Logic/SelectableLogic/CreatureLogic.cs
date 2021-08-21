@@ -10,6 +10,8 @@ public class CreatureLogic : SelectableLogic
     public List<MoveCommand> moveCommands = new List<MoveCommand>();
     public float moveSpeed;
 
+    public float autoGatherRange = 100f;
+
     //Gathering Data
     public float gatherTime = 10f;
     private float gatherTimer = 0f;
@@ -27,7 +29,7 @@ public class CreatureLogic : SelectableLogic
 
     private FactionLogic faction;
 
-    private float distanceThreshold = 5f;
+    private float distanceThreshold = 1f;
 
     [SerializeField]
     private SkinnedMeshRenderer meshRenderer;
@@ -51,6 +53,11 @@ public class CreatureLogic : SelectableLogic
 
     //Command Logic
 
+    public bool HasNoCommands()
+    {
+        return (moveCommands.Count == 0);
+    }
+
     //Clears all previous commands and sets current one to given command
     public void ResetCommandsToThis(MoveCommand goal)
     {
@@ -60,6 +67,11 @@ public class CreatureLogic : SelectableLogic
 
         moveCommands.Clear();
         moveCommands.Add(goal);
+
+        if (base.IsSelected())
+        {
+            RallyPointManager.instance.CreatureFinishedMoveCommand(this);
+        }
     }
 
     public void EnqueueGoal(MoveCommand goal)
@@ -69,6 +81,16 @@ public class CreatureLogic : SelectableLogic
         {
             RallyPointManager.instance.CreatureFinishedMoveCommand(this);
         }        
+    }
+
+    //this adds a goal to the front of the queue
+    public void FrontLoadGoal(MoveCommand goal)
+    {
+        moveCommands.Insert(0, goal);
+        if (base.IsSelected())
+        {
+            RallyPointManager.instance.CreatureFinishedMoveCommand(this);
+        }
     }
 
     private void DequeueGoal()
@@ -95,13 +117,22 @@ public class CreatureLogic : SelectableLogic
     {
         if (moveCommands.Count > 0)
         {
-            if (!MovementLogic.ReachedDestination(transform, moveCommands[0].GetDestination(), distanceThreshold))
+            if (!MovementLogic.ReachedDestination(transform, moveCommands[0], distanceThreshold, GetRadius()))
             {
                 MovementLogic.MoveTowards(transform, moveSpeed, moveCommands[0].GetDestination());
+
+                if (moveCommands[0].moveType == MoveType.AttackMove)
+                {
+                    SelectableLogic closestUnit = CheckForNearbyEnemies();
+                    if (closestUnit != null)
+                    {
+                        FrontLoadGoal(new MoveCommand(MoveType.Attack, Vector3.zero, closestUnit.gameObject));
+                    }
+                }
             }
             else
             {
-                if (moveCommands[0].moveType == MoveType.Move)
+                if (moveCommands[0].moveType == MoveType.Move || moveCommands[0].moveType == MoveType.AttackMove)
                     DequeueGoal();
                 else if (moveCommands[0].moveType == MoveType.Gather)
                 {
@@ -120,7 +151,11 @@ public class CreatureLogic : SelectableLogic
 
         if(moveCommands.Count == 0)
         {
-            CheckForNearbyEnemies();
+            SelectableLogic closestUnit = CheckForNearbyEnemies();
+            if (closestUnit != null)
+            {
+                EnqueueGoal(new MoveCommand(MoveType.Attack, Vector3.zero, closestUnit.gameObject));
+            }
         }
 
 
@@ -156,7 +191,15 @@ public class CreatureLogic : SelectableLogic
             PlantLogic closetEligble = EcosystemLogic.instance.ClosestGatherablePlant(transform.position);
             if(closetEligble != null)//otherwise, look for a new plant
             {
-                ReplaceCurrentGoal(new MoveCommand(MoveType.Gather, Vector3.zero, closetEligble.gameObject));
+                if (Vector3.Distance(closetEligble.GetUIPosition().position, GetUIPosition().position) < autoGatherRange)
+                {
+                    ReplaceCurrentGoal(new MoveCommand(MoveType.Gather, Vector3.zero, closetEligble.gameObject));
+                }
+                else
+                {
+                    FinishGathering();
+                }
+                
             }
             else
             {
@@ -195,7 +238,7 @@ public class CreatureLogic : SelectableLogic
         DequeueGoal();
         if (commands == 1)
         {
-            HiveLogic goal = faction.ClosestHive(transform.position);
+            HiveLogic goal = faction.ClosestBuiltHive(transform.position);
             if (goal != null)
             {
                 EnqueueGoal(new MoveCommand(MoveType.DropOffResources, Vector3.zero, goal.gameObject));
@@ -220,27 +263,39 @@ public class CreatureLogic : SelectableLogic
     {
         HiveLogic hive = objective.GetComponent<HiveLogic>();
 
-        faction.UpdatePollenAmount(pollenGathered);
-        pollenGathered = 0;
-
-        int commands = moveCommands.Count;
-        DequeueGoal();
-        if (commands == 1)
+        if (!hive.IsBuilding())
         {
-            PlantLogic goal = EcosystemLogic.instance.ClosestGatherablePlant(transform.position);
-            if(goal != null)
+            faction.UpdatePollenAmount(pollenGathered);
+            pollenGathered = 0;
+
+            int commands = moveCommands.Count;
+            DequeueGoal();
+            if (commands == 1)
             {
-                EnqueueGoal(new MoveCommand(MoveType.Gather, Vector3.zero, goal.gameObject));
+                PlantLogic closetEligble = EcosystemLogic.instance.ClosestGatherablePlant(transform.position);
+                if (closetEligble != null)
+                {
+                    if (Vector3.Distance(closetEligble.GetUIPosition().position, GetUIPosition().position) < autoGatherRange)
+                    {
+                        EnqueueGoal(new MoveCommand(MoveType.Gather, Vector3.zero, closetEligble.gameObject));
+                    }
+                }
+                else
+                {
+                    EnqueueGoal(new MoveCommand(MoveType.Move, hive.rallyPoint.position));
+                }
+                //else move command to rally point
             }
-            else
-            {
-                EnqueueGoal(new MoveCommand(MoveType.Move, hive.rallyPoint.position));
-            }
-            //else move command to rally point
         }
+        else
+        {
+            DequeueGoal();
+        }        
     }
 
-    private void CheckForNearbyEnemies()
+    
+
+    private SelectableLogic CheckForNearbyEnemies()
     {
         SelectableLogic closestUnit = null;
         float unitDist = Mathf.Infinity;
@@ -253,15 +308,7 @@ public class CreatureLogic : SelectableLogic
                 closestUnit = unit;
             }
         }
-
-        if(closestUnit != null)
-        {
-            if(closestUnit.GetComponent<HiveLogic>() != null)
-                Debug.Log("attacking hive");
-            if (closestUnit.GetComponent<CreatureLogic>() != null)
-                Debug.Log("attacking bee");
-            EnqueueGoal(new MoveCommand(MoveType.Attack, Vector3.zero, closestUnit.gameObject));
-        }
+        return closestUnit;
     }
 
     //Attack Logic
@@ -284,17 +331,23 @@ public class CreatureLogic : SelectableLogic
 
     public void FixedUpdate()
     {
+        if (!dead)
+        {
+            IncrementHealthTimer();
+        }
         UpdateCommands();
     }
 
 
-    public override void ChangeHealth(int healthChange)
+    public override void ChangeHealth(float healthChange)
     {
+        ResetHealthTimer();
         currentHealth += healthChange;
         if (currentHealth > maxHealth)
             currentHealth = maxHealth;
         else if (currentHealth <= 0)
         {
+            faction.BeeDied(this);
             ResetGathering();
             currentHealth = 0;
             dead = true;

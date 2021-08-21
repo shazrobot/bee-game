@@ -4,12 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class HiveLogic : SelectableLogic
-{
-    public MeshRenderer modelMesh;
-
-
-    
-
+{  
     [SerializeField]
     public Transform rallyPoint;
 
@@ -24,11 +19,41 @@ public class HiveLogic : SelectableLogic
     private FactionLogic faction;
 
     [SerializeField]
-    private MeshRenderer meshRenderer;
+    private HiveAnimation hiveAnimation;
+
+    private HiveBuildLocation location;
+
+    private bool building = false;
+
+    private float hiveConstructionTime = 60f;
+    private float hiveConstructionCounter = 0;
+
+    //Unity methods
 
     protected override void Awake()
     {
         base.Awake();
+    }
+
+    public void FixedUpdate()
+    {
+        if (!dead)
+        {
+            IncrementHealthTimer();
+        }
+        IncrementTime();
+    }
+
+    //Getters
+
+    public bool IsBuilding()
+    {
+        return building;
+    }
+
+    public bool IsFullQueue()
+    {
+        return (beeQueue >= beeQueueMax);
     }
 
     public FactionLogic GetFaction()
@@ -36,11 +61,38 @@ public class HiveLogic : SelectableLogic
         return faction;
     }
 
-    public void SetCreationVariables(FactionLogic fact, Material material)
+    public HiveBuildLocation GetHiveLocation()
+    {
+        return location;
+    }
+
+    
+    //Creation methods
+
+    public void InitialiseConstruction()
+    {
+        currentHealth = 1;
+        hiveAnimation.HideCombs();
+        building = true;
+        hiveConstructionCounter = 0;
+    }
+
+    private void FinaliseConstruction()
+    {
+        building = false;
+        hiveAnimation.ShowCombs();
+        faction.UpdateBeeCap();
+    }
+
+    public void SetCreationVariables(FactionLogic fact, Material material, HiveBuildLocation loc)
     {
         faction = fact;
-        meshRenderer.material = material;
+        hiveAnimation.ColourCombs(material);
+        location = loc;
     }
+
+
+    //Variety methods
 
     public void BuildBee()//Build bee
     {
@@ -55,10 +107,9 @@ public class HiveLogic : SelectableLogic
     {
         constructionTimer = 0f;
     }
-
     public bool QueueBeeBuild()
     {
-        if(beeQueue == 6 || !faction.CanAffordBee())
+        if(beeQueue == beeQueueMax || !faction.CanAffordBee() || IsBuilding())
         {
             return false;
         }
@@ -74,16 +125,48 @@ public class HiveLogic : SelectableLogic
     {
         if (beeQueue > 0)
         {
-            constructionTimer += Time.deltaTime;
             if (constructionTimer >= beeConstructionTime)
             {
                 BuildBee();
             }
+            else
+            {
+                constructionTimer += Time.deltaTime;
+            }
+        }
+
+        if (building)
+        {
+            hiveConstructionCounter += Time.deltaTime;
+            float amountGrown = hiveConstructionCounter / hiveConstructionTime;
+
+            ChangeHealth((Time.deltaTime / hiveConstructionTime) * maxHealth);
+
+            hiveAnimation.GrowHive(amountGrown);
+            if (hiveConstructionCounter >= hiveConstructionTime)
+            {
+                FinaliseConstruction();
+            }
         }
     }
 
-    public void FixedUpdate()
+    
+
+    public override void ChangeHealth(float healthChange)
     {
-        IncrementTime();
+        ResetHealthTimer();
+        currentHealth += healthChange;
+        if (currentHealth > maxHealth)
+            currentHealth = maxHealth;
+        else if (currentHealth <= 0)
+        {
+            if (location != null)
+                location.Unoccupy();
+            //make the hive location available again
+            faction.HiveDied(this);
+            currentHealth = 0;
+            dead = true;
+            gameObject.SetActive(false);
+        }
     }
 }

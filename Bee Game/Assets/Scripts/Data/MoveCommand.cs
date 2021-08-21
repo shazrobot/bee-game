@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum MoveType { Move, Gather, Attack, DropOffResources};
+public enum MoveType { Move, Gather, Attack, DropOffResources, AttackMove};
 
 public struct MoveCommand
 {
@@ -16,6 +16,11 @@ public struct MoveCommand
         moveType = mT;
         moveDestination = mD;
         objective = obj;
+    }
+
+    public bool IsObjectBased()
+    {
+        return (moveDestination == Vector3.zero);
     }
 
     public Vector3 GetDestination()

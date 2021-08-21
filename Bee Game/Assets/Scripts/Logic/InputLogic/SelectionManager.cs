@@ -248,17 +248,19 @@ public class SelectionManager : MonoBehaviour
         
         if(Input.GetKey(KeyCode.LeftShift)|| Input.GetKey(KeyCode.RightShift))
         {
-            foreach (CreatureLogic creature in SelectedUnits)
-            {
-                creature.EnqueueGoal(new MoveCommand(MoveType.Move, hitPoint));
-            }
+            FormationLogic.FormationMove(SelectedUnits, hitPoint, true);
+            //foreach (CreatureLogic creature in SelectedUnits)
+            //{
+            //    creature.EnqueueGoal(new MoveCommand(MoveType.Move, hitPoint));
+            //}
         }
         else
         {
-            foreach (CreatureLogic creature in SelectedUnits)
-            {
-                creature.ResetCommandsToThis(new MoveCommand(MoveType.Move, hitPoint));
-            }
+            FormationLogic.FormationMove(SelectedUnits, hitPoint, false);
+            //foreach (CreatureLogic creature in SelectedUnits)
+            //{
+            //    creature.ResetCommandsToThis(new MoveCommand(MoveType.Move, hitPoint));
+            //}
         }
         DisplaySelectedRallyPoints();
     }

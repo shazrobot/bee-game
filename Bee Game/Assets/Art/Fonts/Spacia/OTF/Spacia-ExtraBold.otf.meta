@@ -1,0 +1,28 @@
+fileFormatVersion: 2
+guid: 66fd23f20fc0c9840bb19e680e1b0ec7
+TrueTypeFontImporter:
+  externalObjects: {}
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontName: Spacia
+  fontNames:
+  - Spacia
+  fallbackFontReferences:
+  - {fileID: 12800000, guid: 072449a076f03754cb979ad034bae828, type: 3}
+  - {fileID: 12800000, guid: 1c5be51378355a8438abe1d3e394f872, type: 3}
+  - {fileID: 12800000, guid: 593384d35d3f0524390b24a28c559564, type: 3}
+  - {fileID: 12800000, guid: 602c781945bbcc64faaef2bd72286c8b, type: 3}
+  - {fileID: 12800000, guid: 654686e9510b9ea40894c1d64a98fa02, type: 3}
+  - {fileID: 12800000, guid: 026bfd6c1a2831d44a81b46fc670e27c, type: 3}
+  customCharacters: 
+  fontRenderingMode: 0
+  ascentCalculationMode: 1
+  useLegacyBoundsCalculation: 0
+  shouldRoundAdvanceValue: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

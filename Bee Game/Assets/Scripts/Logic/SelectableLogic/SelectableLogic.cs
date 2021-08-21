@@ -8,13 +8,19 @@ public class SelectableLogic : MonoBehaviour
     [SerializeField]
     private int uIScale = 5;
     [SerializeField]
+    private float radius = 5;
+    [SerializeField]
     private Transform manualUITransform;
 
     [SerializeField]
-    private protected int maxHealth = 100;
-    private protected int currentHealth = 100;
+    private protected float maxHealth = 100;
+    private protected float currentHealth = 100;
 
     private protected bool dead = false;
+
+    private float healthRegenCounter = 0;
+    private int healthRegenAmount = 2;
+    private float healthRegenTime = 5f;
 
     protected virtual void Awake()
     {
@@ -26,24 +32,29 @@ public class SelectableLogic : MonoBehaviour
         }
     }
 
+    private void FixedUpdate()
+    {
+        if (!dead)
+        {
+            IncrementHealthTimer();
+        }
+    }
+
+    //Getters
+
+    public float GetRadius()
+    {
+        return radius;
+    }
+
     public bool IsSelected()
     {
         return selected;
     }
 
-    public void Select()
-    {
-        selected = true;
-    }
-
-    public void Deselect()
-    {
-        selected = false;
-    }
-
     public int GetUIScale()
     {
-        if(uIScale <= 0)
+        if (uIScale <= 0)
         {
             return 100;
         }
@@ -57,7 +68,6 @@ public class SelectableLogic : MonoBehaviour
         else
             return transform;
     }
-
     public bool IsDead()
     {
         return dead;
@@ -70,20 +80,50 @@ public class SelectableLogic : MonoBehaviour
 
     public float GetHealthRatio()
     {
-        return (currentHealth/(float)maxHealth);
+        return (currentHealth / (float)maxHealth);
     }
 
-    public virtual void ChangeHealth(int healthChange)
+    //Setters
+
+    public void Select()
     {
+        selected = true;
+    }
+
+    public void Deselect()
+    {
+        selected = false;
+    }
+
+    public virtual void ChangeHealth(float healthChange)
+    {
+        ResetHealthTimer();
         currentHealth += healthChange;
         if (currentHealth > maxHealth)
             currentHealth = maxHealth;
+        
         else if (currentHealth <= 0)
         {
+            
             currentHealth = 0;
             dead = true;
             gameObject.SetActive(false);
         }
-            
     }
+
+    protected void IncrementHealthTimer()
+    {
+        healthRegenCounter += Time.deltaTime;
+        if (healthRegenCounter >= healthRegenTime)
+        {
+            ChangeHealth(healthRegenAmount);
+        }
+    }
+
+    protected void ResetHealthTimer()
+    {
+        healthRegenCounter = 0f;
+    }
+
+    
 }

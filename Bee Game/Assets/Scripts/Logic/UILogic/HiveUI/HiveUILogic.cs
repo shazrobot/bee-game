@@ -30,7 +30,7 @@ public class HiveUILogic : MonoBehaviour
 
     private void PlaceUI()
     {
-        if(hive != null)
+        if(hive != null && !hive.IsBuilding())
         {
             gameObject.SetActive(true);
             screenPos = Camera.main.WorldToScreenPoint(hive.GetUIPosition().position);
@@ -49,7 +49,7 @@ public class HiveUILogic : MonoBehaviour
         ShowGrowthHexes();
         if(hive.beeQueue > 0)
         {
-            growthHexes[0].UpdateGrowthHex(hive.beeConstructionTime, hive.constructionTimer);
+            growthHexes[0].UpdateGrowthHex(hive.beeConstructionTime, Mathf.Min(hive.constructionTimer, hive.beeConstructionTime-.01f));
         }
     }
 

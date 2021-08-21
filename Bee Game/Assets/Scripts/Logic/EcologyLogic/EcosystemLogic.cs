@@ -61,6 +61,23 @@ public class EcosystemLogic : TimeManagerObserver
         }
     }
 
+    //can return null if there are no eligble locations
+    public HiveBuildLocation ClosestHiveBuildLocation(Vector3 position)
+    {
+        float distance = Mathf.Infinity;
+        HiveBuildLocation bestChoice = null;
+        foreach (HiveBuildLocation hiveBuildLocation in hiveBuildLocations)
+        {
+            float dist = Vector3.Distance(hiveBuildLocation.transform.position, position);
+            if((dist < distance) && !hiveBuildLocation.IsOccupied())
+            {
+                distance = dist;
+                bestChoice = hiveBuildLocation;
+            }
+        }
+
+        return bestChoice;
+    }
 
     //take into account if it has pollen and is being gathered
     public PlantLogic ClosestGatherablePlant(Vector3 position)
@@ -70,7 +87,7 @@ public class EcosystemLogic : TimeManagerObserver
         PlantLogic closest = null;
         foreach (PlantLogic plant in plants)
         {
-            calc = Vector3.Distance(plant.transform.position, position);
+            calc = Vector3.Distance(plant.GetUIPosition().position, position);
             if (calc < dist && plant.HasPollen() && !plant.IsBeingPollinated())
             {
                 closest = plant;
@@ -78,6 +95,21 @@ public class EcosystemLogic : TimeManagerObserver
             }
         }
         return closest;
+    }
+
+    public int PlantsInRange(Vector3 position, float distance)
+    {
+        int counter = 0;
+
+        foreach(PlantLogic plant in plants)
+        {
+            if(Vector3.Distance(plant.GetUIPosition().position, position) <= distance)
+            {
+                counter++;
+            }
+        }
+
+        return counter;
     }
 
     private void GrassReproduction()
