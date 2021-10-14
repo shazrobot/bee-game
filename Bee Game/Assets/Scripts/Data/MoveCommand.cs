@@ -23,11 +23,25 @@ public struct MoveCommand
         return (moveDestination == Vector3.zero);
     }
 
+    public GameObject GetObjective()
+    {
+        return objective;
+    }
+
     public Vector3 GetDestination()
     {
-        if (moveType == MoveType.Move)
+        if (moveType == MoveType.Move || moveType == MoveType.AttackMove)
         {
-            return moveDestination;
+            if (objective != null)
+            {
+                if (objective.GetComponent<SelectableLogic>() != null)
+                {
+                    return objective.GetComponent<SelectableLogic>().GetUIPosition().position;
+                }
+                return objective.transform.position;
+            }
+            else
+                return moveDestination;
         }
         else
         {

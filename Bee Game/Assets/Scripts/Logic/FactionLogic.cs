@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum FriendlinessType { Friendly, Neutral, Hostile, None }
 public class FactionLogic : MonoBehaviour
 {
     public string factionName;
@@ -81,6 +82,61 @@ public class FactionLogic : MonoBehaviour
     public int GetBeeCap()
     {
         return beeCap;
+    }
+
+    public FriendlinessType GetFriendlinessOfSelectable(SelectableLogic selectable)
+    {
+        if(selectable.GetComponent<PlantLogic>() != null)
+        {
+            return FriendlinessType.Neutral;
+        }
+        if (selectable.GetComponent<HiveLogic>() != null)
+        {
+            HiveLogic hive = selectable.GetComponent<HiveLogic>();
+            if (hives.Contains(hive))
+                return FriendlinessType.Friendly;
+            foreach (FactionLogic faction in enemyFactions)
+            {
+                if (faction.hives.Contains(hive))
+                    return FriendlinessType.Hostile;
+            }
+            
+        }
+        if (selectable.GetComponent<CreatureLogic>() != null)
+        {
+            CreatureLogic bee = selectable.GetComponent<CreatureLogic>();
+            if (bees.Contains(bee))
+                return FriendlinessType.Friendly;
+            foreach (FactionLogic faction in enemyFactions)
+            {
+                if (faction.bees.Contains(bee))
+                    return FriendlinessType.Hostile;
+            }
+        }
+
+        return FriendlinessType.None;
+    }
+
+    public List<CreatureLogic> FilterMyBees(List<CreatureLogic> beeList)
+    {
+        List<CreatureLogic> filteredBees = new List<CreatureLogic>();
+
+        foreach(CreatureLogic bee in beeList)
+        {
+            if (IsMyBee(bee))
+                filteredBees.Add(bee);
+        }
+        return filteredBees;
+    }
+
+    public bool IsMyBee(CreatureLogic bee)
+    {
+        return bees.Contains(bee);
+    }
+
+    public bool IsMyHive(HiveLogic hive)
+    {
+        return hives.Contains(hive);
     }
 
     //Updates

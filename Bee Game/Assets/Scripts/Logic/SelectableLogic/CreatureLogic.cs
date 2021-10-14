@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Security.Authentication.ExtendedProtection;
 using UnityEditor;
 using UnityEngine;
 
@@ -17,13 +18,18 @@ public class CreatureLogic : SelectableLogic
     private float gatherTimer = 0f;
     [SerializeField]
     private PlantLogic gatherFrom = null;
+    private PlantLogic allocatedPlant = null;
     private int pollenGathered = 0;
-    private int pollenMax = 100;
+    [SerializeField]
+    private int pollenMax = 10;
     [SerializeField]
     private int attack = 20;
 
     private float attackCooldownCounter = 0f;
     private float attackCooldown = 2f;
+
+    private bool attackPoweredUp = false;
+    private float lethalityDamageBuff = 25f;
 
     private float aggroRange = 50f;
 
@@ -31,15 +37,25 @@ public class CreatureLogic : SelectableLogic
 
     private float distanceThreshold = 1f;
 
+    private float attackRange = 1f;
+
+    private float tempFloat;
+
     [SerializeField]
     private SkinnedMeshRenderer meshRenderer;
+
+    [SerializeField]
+    private BeeAnimations animations;
+
+    private FlowerType previouslyPollinated = FlowerType.None;
 
     protected override void Awake()
     {
         base.Awake();
+        SetLethality(false);
     }
 
-    //
+
     public void SetCreationVariables(FactionLogic fact, Material material)
     {
         faction = fact;
@@ -50,6 +66,12 @@ public class CreatureLogic : SelectableLogic
     {
         return faction;
     }
+
+    public int GetPollenAmount()
+    {
+        return pollenGathered;
+    }
+
 
     //Command Logic
 
@@ -64,10 +86,10 @@ public class CreatureLogic : SelectableLogic
         //clear any gathering commands
         ResetGathering();
         //probably good to tell a plant it is no longer being gathered from by the pollinator
-
+        DeallocationCheck();
         moveCommands.Clear();
         moveCommands.Add(goal);
-
+        AllocationCheck(moveCommands[0]);
         if (base.IsSelected())
         {
             RallyPointManager.instance.CreatureFinishedMoveCommand(this);
@@ -80,13 +102,19 @@ public class CreatureLogic : SelectableLogic
         if (base.IsSelected())
         {
             RallyPointManager.instance.CreatureFinishedMoveCommand(this);
-        }        
+        }
+        if (moveCommands.Count == 1)
+        {
+            AllocationCheck(moveCommands[0]);
+        }
     }
 
     //this adds a goal to the front of the queue
     public void FrontLoadGoal(MoveCommand goal)
     {
+        DeallocationCheck();
         moveCommands.Insert(0, goal);
+        AllocationCheck(goal);
         if (base.IsSelected())
         {
             RallyPointManager.instance.CreatureFinishedMoveCommand(this);
@@ -103,23 +131,77 @@ public class CreatureLogic : SelectableLogic
                 RallyPointManager.instance.CreatureFinishedMoveCommand(this);
             }
         }
+        if (!HasNoCommands())
+        {
+            AllocationCheck(moveCommands[0]);
+        }
     }
 
     private void ReplaceCurrentGoal(MoveCommand goal)
     {
-        if (moveCommands.Count >= 1)
+        if (!HasNoCommands())
         {
             moveCommands[0] = goal;
+            AllocationCheck(goal);
         }
+    }
+
+    private void AllocationCheck(MoveCommand goal)
+    {
+        if(!HasNoCommands())
+        {
+            if(moveCommands[0].moveType == MoveType.Gather)
+            {
+                PlantLogic plant = goal.GetObjective().GetComponent<PlantLogic>();
+                if(plant != allocatedPlant)
+                    RemoveFromPlantGatherList(allocatedPlant);
+                AllocateToPlantGatherList(plant);
+            }
+        }
+    }
+
+    private void DeallocationCheck()
+    {
+        if (!HasNoCommands())
+        {
+            if (moveCommands[0].moveType == MoveType.Gather)
+            {
+                PlantLogic plant = moveCommands[0].GetObjective().GetComponent<PlantLogic>();
+                RemoveFromPlantGatherList(allocatedPlant);
+            }
+        }
+    }
+
+    private void AllocateToPlantGatherList(PlantLogic plant)
+    {
+        allocatedPlant = plant;
+        plant.AddBeeToGatherAllocation(this);
+    }
+
+    public void RemoveFromPlantGatherList(PlantLogic plant)
+    {
+        allocatedPlant = null;
+        if(plant != null)
+            plant.RemoveBeeFromGatherAllocation(this);
+
+        animations.StopGatherAnimation();
+    }
+
+    public void UnallocatePlant(PlantLogic plant)
+    {
+        allocatedPlant = null;
     }
 
     private void UpdateCommands()
     {
         if (moveCommands.Count > 0)
         {
-            if (!MovementLogic.ReachedDestination(transform, moveCommands[0], distanceThreshold, GetRadius()))
+            tempFloat = distanceThreshold;
+            if (moveCommands[0].moveType == MoveType.Attack)
+                tempFloat += attackRange;
+            if (!MovementLogic.ReachedDestination(transform, moveCommands[0], tempFloat, GetRadius()))
             {
-                MovementLogic.MoveTowards(transform, moveSpeed, moveCommands[0].GetDestination());
+                MovementLogic.MoveTowards(transform, moveSpeed, moveCommands[0].GetDestination(), GetRadius());
 
                 if (moveCommands[0].moveType == MoveType.AttackMove)
                 {
@@ -158,6 +240,10 @@ public class CreatureLogic : SelectableLogic
             }
         }
 
+        if (moveCommands.Count == 0)
+        {
+            MovementLogic.IdleAvoidanceOfBees(this, moveSpeed, GetRadius());
+        }
 
         if (attackCooldownCounter > 0)
         {
@@ -165,6 +251,9 @@ public class CreatureLogic : SelectableLogic
             if (attackCooldownCounter < 0)
                 attackCooldownCounter = 0f;
         }
+
+
+
         //if idle, you could spread yourself out, or check for enemies
     }
 
@@ -185,27 +274,18 @@ public class CreatureLogic : SelectableLogic
             gatherTimer = 0f;
             gatherFrom = plant;
             plant.InitiatePollination(this);
+            animations.PlayGatherAnimation();
         }
         else if (plant != gatherFrom)
         {
-            PlantLogic closetEligble = EcosystemLogic.instance.ClosestGatherablePlant(transform.position);
+            PlantLogic closetEligble = EcosystemLogic.instance.ClosestGatherablePlantOfTypeWithShortestQueue(transform.position, plant.GetFlowerType(), this, autoGatherRange);
             if(closetEligble != null)//otherwise, look for a new plant
             {
                 if (Vector3.Distance(closetEligble.GetUIPosition().position, GetUIPosition().position) < autoGatherRange)
                 {
                     ReplaceCurrentGoal(new MoveCommand(MoveType.Gather, Vector3.zero, closetEligble.gameObject));
                 }
-                else
-                {
-                    FinishGathering();
-                }
-                
             }
-            else
-            {
-                FinishGathering();
-            }
-            //if no new plants, then just hang out here until new command is given, or t he plant becomes available
         }
         
 
@@ -220,19 +300,46 @@ public class CreatureLogic : SelectableLogic
             if (gatherTimer >= gatherTime)
             {
                 CollectPollen(plant);
+
+                if (plant.GetFlowerType() == FlowerType.Health)
+                {
+                    animations.PlayHealthAnimation();
+                }
+
                 FinishGathering();
             }
         }
         
     }
 
+    private void SetLethality(bool status)
+    {
+        attackPoweredUp = status;
+        animations.SetRedStatus(status);
+    }
+
     private void CollectPollen(PlantLogic plant)
     {
+        animations.StopGatherAnimation();
         pollenGathered += plant.GatherAvailablePollen(pollenMax-pollenGathered);
+        previouslyPollinated = plant.GetFlowerType();
+        if (plant.GetFlowerType() == FlowerType.Health)
+        {
+            ChangeHealth(plant.GetFlowerHealAmount());
+        }
+        if (plant.GetFlowerType() == FlowerType.Lethality)
+        {
+            SetLethality(true);
+        }
+        if(pollenGathered > 0)
+        {
+            animations.ShowPollen();
+        }
     }
 
     private void FinishGathering()
     {
+        animations.StopGatherAnimation();
         int commands = moveCommands.Count;
         ResetGathering();
         DequeueGoal();
@@ -248,13 +355,13 @@ public class CreatureLogic : SelectableLogic
 
     private void ResetGathering()
     {
+        animations.StopGatherAnimation();
         gatherTimer = 0f;
         if(gatherFrom != null)
         {
             gatherFrom.HaltPollination();
         }
         gatherFrom = null;
-
     }
 
     //Delivery Logic
@@ -267,24 +374,28 @@ public class CreatureLogic : SelectableLogic
         {
             faction.UpdatePollenAmount(pollenGathered);
             pollenGathered = 0;
+            animations.HidePollen();
 
             int commands = moveCommands.Count;
             DequeueGoal();
             if (commands == 1)
             {
-                PlantLogic closetEligble = EcosystemLogic.instance.ClosestGatherablePlant(transform.position);
-                if (closetEligble != null)
+                if (allocatedPlant != null && !allocatedPlant.IsDead())
                 {
-                    if (Vector3.Distance(closetEligble.GetUIPosition().position, GetUIPosition().position) < autoGatherRange)
-                    {
-                        EnqueueGoal(new MoveCommand(MoveType.Gather, Vector3.zero, closetEligble.gameObject));
-                    }
+                    EnqueueGoal(new MoveCommand(MoveType.Gather, Vector3.zero, allocatedPlant.gameObject));
                 }
                 else
                 {
-                    EnqueueGoal(new MoveCommand(MoveType.Move, hive.rallyPoint.position));
+                    PlantLogic closetEligble = EcosystemLogic.instance.ClosestGatherablePlantOfTypeWithShortestQueue(transform.position, previouslyPollinated, this, autoGatherRange);
+                    if (closetEligble != null)
+                    {
+                        if (Vector3.Distance(closetEligble.GetUIPosition().position, GetUIPosition().position) < autoGatherRange)
+                        {
+                            EnqueueGoal(new MoveCommand(MoveType.Gather, Vector3.zero, closetEligble.gameObject));
+                        }
+                    }
                 }
-                //else move command to rally point
+
             }
         }
         else
@@ -313,14 +424,58 @@ public class CreatureLogic : SelectableLogic
 
     //Attack Logic
 
+    private void InitiateAttackOnObjective(GameObject objective)
+    {
+        SelectableLogic selectable = objective.GetComponent<SelectableLogic>();
+
+        if (attackCooldownCounter <= 0)
+        {
+            animations.PlayAttackAnimation();
+            attackCooldownCounter = attackCooldown;
+        }
+
+        if (selectable.IsDead())
+        {
+            DequeueGoal();
+        }
+    }
+
+    private void AttackLandedOnObjective(GameObject objective)
+    {
+        SelectableLogic selectable = objective.GetComponent<SelectableLogic>();
+
+        float damage = (attackPoweredUp) ? -attack - lethalityDamageBuff : -attack;
+        if (selectable.GetComponent<CreatureLogic>() != null)
+        {
+            selectable.GetComponent<CreatureLogic>().AttackedByBee(this);
+        }
+        selectable.ChangeHealth(damage);
+        
+        if (attackPoweredUp)
+            SetLethality(false);
+
+        if (selectable.IsDead())
+        {
+            DequeueGoal();
+        }
+    }
+
     private void AttackObjective(GameObject objective)
     {
         SelectableLogic selectable = objective.GetComponent<SelectableLogic>();
 
         if (attackCooldownCounter <= 0)
         {
-            selectable.ChangeHealth(-attack);
+            animations.PlayAttackAnimation();
+            float damage = (attackPoweredUp) ? -attack - lethalityDamageBuff : -attack;
+            if(selectable.GetComponent<CreatureLogic>() != null)
+            {
+                selectable.GetComponent<CreatureLogic>().AttackedByBee(this);
+            }
+            selectable.ChangeHealth(damage);
             attackCooldownCounter = attackCooldown;
+            if (attackPoweredUp)
+                SetLethality(false);
         }
 
         if (selectable.IsDead())
@@ -339,6 +494,20 @@ public class CreatureLogic : SelectableLogic
     }
 
 
+    public void AttackedByBee(CreatureLogic aggressor)
+    {
+        if(faction.GetFriendlinessOfSelectable(aggressor) == FriendlinessType.Hostile)
+        {
+            if(moveCommands.Count > 0)
+            {
+                if (moveCommands[0].moveType == MoveType.Gather || moveCommands[0].moveType == MoveType.DropOffResources)
+                {
+                    FrontLoadGoal(new MoveCommand(MoveType.Attack, Vector3.zero, aggressor.gameObject));
+                }
+            }
+        }
+    }
+
     public override void ChangeHealth(float healthChange)
     {
         ResetHealthTimer();
@@ -347,6 +516,7 @@ public class CreatureLogic : SelectableLogic
             currentHealth = maxHealth;
         else if (currentHealth <= 0)
         {
+            SelectionManager.instance.SelectableDied(this);
             faction.BeeDied(this);
             ResetGathering();
             currentHealth = 0;

@@ -12,7 +12,7 @@ public class EcosystemLogic : TimeManagerObserver
 
     public GrassGrowthManager grassGrowthManager;
 
-    public List<HiveBuildLocation> hiveBuildLocations = new List<HiveBuildLocation>();
+    public List<HiveBuildLocation> hiveBuildLocations;
 
     //Blade height
     private float grassHeight = 5f; //between 1.5 and 5
@@ -45,12 +45,48 @@ public class EcosystemLogic : TimeManagerObserver
     private Collider water;
     [SerializeField]
     private Collider ground;
+
+
+
+    //Grass parameters
+
+    private float waxHeight = 6;
+    private float waxWidth = 0.6f;
+    private int waxBend = 1;
+
+    private float waneHeight = 3;
+    private float waneWidth = 0.3f;
+    private int waneBend = 4;
+
     private void Awake()
     {
         instance = this;
 
         Vector3 testPosition = new Vector3();
+        StartupPlantPopulate();
+        StartupNoGrowPopulate();
+        StartupHiveBuildLocationPopulate();
+    }
 
+    private void StartupPlantPopulate()
+    {
+        plants.Clear();
+
+        plants.AddRange(FindObjectsOfType<PlantLogic>());
+    }
+
+    private void StartupNoGrowPopulate()
+    {
+        noGrowObjects.Clear();
+
+        noGrowObjects.AddRange(FindObjectsOfType<NoGrow>());
+    }
+
+    private void StartupHiveBuildLocationPopulate()
+    {
+        hiveBuildLocations.Clear();
+
+        hiveBuildLocations.AddRange(FindObjectsOfType<HiveBuildLocation>());
     }
 
     public void AddHiveBuildLocation(HiveBuildLocation buildLocation)
@@ -97,6 +133,80 @@ public class EcosystemLogic : TimeManagerObserver
         return closest;
     }
 
+    public PlantLogic ClosestGatherablePlantOfTypeWithShortestQueue(Vector3 position, FlowerType type, CreatureLogic bee, float GatherRangeCutoff)
+    {
+        if (type == FlowerType.None)
+        {
+            return (ClosestGatherablePlant(position));
+        }
+        float dist = Mathf.Infinity;
+        int allocationSize = 1000;
+        float calc;
+        PlantLogic closest = null;
+        foreach (PlantLogic plant in plants)
+        {
+            calc = Vector3.Distance(plant.GetUIPosition().position, position);
+            if (type == plant.GetFlowerType() && plant.HasPollen() && calc < GatherRangeCutoff)
+            {                
+                if (plant.GetGathererAllocationSizeExcludingBee(bee) < allocationSize)
+                {
+                    closest = plant;
+                    dist = calc;
+                    allocationSize = plant.GetGathererAllocationSizeExcludingBee(bee);
+                }
+
+                if (plant.GetGathererAllocationSizeExcludingBee(bee) == allocationSize && calc < dist)
+                {
+                    closest = plant;
+                    dist = calc;
+                }
+            }            
+        }
+        return closest;
+    }
+
+    public PlantLogic ClosestGatherablePlantOfType(Vector3 position, FlowerType type)
+    {
+        if (type == FlowerType.None)
+        {
+            return (ClosestGatherablePlant(position));
+        }
+        float dist = Mathf.Infinity;
+        float calc;
+        PlantLogic closest = null;
+        foreach (PlantLogic plant in plants)
+        {
+            calc = Vector3.Distance(plant.GetUIPosition().position, position);
+            if (calc < dist && plant.HasPollen() && type == plant.GetFlowerType())
+            {
+                closest = plant;
+                dist = calc;
+            }
+        }
+        return closest;
+    }
+
+    public PlantLogic ClosestGatherableUnoccupiedPlantOfType(Vector3 position, FlowerType type)
+    {
+        if(type == FlowerType.None)
+        {
+            return (ClosestGatherablePlant(position));
+        }
+        float dist = Mathf.Infinity;
+        float calc;
+        PlantLogic closest = null;
+        foreach (PlantLogic plant in plants)
+        {
+            calc = Vector3.Distance(plant.GetUIPosition().position, position);
+            if (calc < dist && plant.HasPollen() && !plant.IsBeingPollinated() && type == plant.GetFlowerType())
+            {
+                closest = plant;
+                dist = calc;
+            }
+        }
+        return closest;
+    }
+
     public int PlantsInRange(Vector3 position, float distance)
     {
         int counter = 0;
@@ -112,21 +222,15 @@ public class EcosystemLogic : TimeManagerObserver
         return counter;
     }
 
+    public void PlantDied(PlantLogic plant)
+    {
+        plants.Remove(plant);
+    }
+
     private void GrassReproduction()
     {
         //could be an ienum in the future
-        grassGrowthManager.GrassReproduction();
-    }
-
-    
-
-    public override void SeasonChanged(Season season)
-    {
-        if (season == Season.Spring)
-        {
-            GrassReproduction();
-            PlantReproduction();
-        }
+        StartCoroutine(grassGrowthManager.GrassReproductionCoroutine());
     }
 
     private void SetGlobalShaderVariables()
@@ -139,58 +243,6 @@ public class EcosystemLogic : TimeManagerObserver
         Shader.SetGlobalColor("_SeasonalBottomColour", bottomColour);
     }
 
-    public override void SeasonLerp(Season season, float seasonProgressed)
-    {
-        if (season == Season.Spring)
-        {
-            float modLerp = seasonProgressed / 2f;
-            grassHeight = Mathf.Lerp(2, 5, seasonProgressed);
-            grassWidth = Mathf.Lerp(0.2f, 0.5f, seasonProgressed);
-            grassTesselationAmount = 9;
-            //grassTesselationAmount = Mathf.Lerp(3, 5, modLerp);
-            grassBendAmount = Mathf.Lerp(4, 1, seasonProgressed);
-            topColour = Color.Lerp(ColourData.instance.winterTopGrass, ColourData.instance.springTopGrass, seasonProgressed);
-            bottomColour = Color.Lerp(ColourData.instance.winterBottomGrass, ColourData.instance.springBottomGrass, seasonProgressed);
-            SetGlobalShaderVariables();
-        }
-        else if (season == Season.Summer)
-        {
-            float modLerp = (seasonProgressed / 2f)+0.5f;
-            //grassHeight = Mathf.Lerp(1, 5, modLerp);
-            //grassWidth = Mathf.Lerp(0.1f, 0.5f, modLerp);
-            grassTesselationAmount = 9;
-            //grassTesselationAmount = Mathf.Lerp(3, 5, modLerp);
-            grassBendAmount = Mathf.Lerp(1, 2, seasonProgressed);
-            topColour = Color.Lerp(ColourData.instance.springTopGrass, ColourData.instance.summerTopGrass, seasonProgressed);
-            bottomColour = Color.Lerp(ColourData.instance.springBottomGrass, ColourData.instance.summerBottomGrass, seasonProgressed);
-            SetGlobalShaderVariables();
-        }
-        else if (season == Season.Autumn)
-        {
-            grassHeight = 5;
-            grassWidth = 0.5f;
-            grassTesselationAmount = 9;
-            //grassTesselationAmount = Mathf.Lerp(5, 3, seasonProgressed);
-            grassBendAmount = Mathf.Lerp(2, 3, seasonProgressed);
-            topColour = Color.Lerp(ColourData.instance.summerTopGrass, ColourData.instance.autumnTopGrass, seasonProgressed);
-            bottomColour = Color.Lerp(ColourData.instance.summerBottomGrass, ColourData.instance.autumnBottomGrass, seasonProgressed);
-            SetGlobalShaderVariables();
-        }
-        else if (season == Season.Winter)
-        {
-            grassHeight = Mathf.Lerp(5, 2, seasonProgressed);
-            grassWidth = Mathf.Lerp(0.5f, 0.2f, seasonProgressed);
-            //grassHeight = 5;
-            //grassWidth = 0.5f;
-            grassTesselationAmount = 9;
-            //grassTesselationAmount = Mathf.Lerp(3, 0, seasonProgressed);
-            grassBendAmount = Mathf.Lerp(3, 4, seasonProgressed);
-            topColour = Color.Lerp(ColourData.instance.autumnTopGrass, ColourData.instance.winterTopGrass, seasonProgressed);
-            bottomColour = Color.Lerp(ColourData.instance.autumnBottomGrass, ColourData.instance.winterBottomGrass, seasonProgressed);
-            SetGlobalShaderVariables();
-        }
-    }
-
     public bool IsOutOfBounds(Vector3 position)
     {
         return !((position.x < xMax) &&
@@ -201,19 +253,64 @@ public class EcosystemLogic : TimeManagerObserver
 
     //Plant reproduction functions
 
-    private void PlantReproduction()
+    public List<PlantLogic> PlantListRandomiser(List<PlantLogic> list)
+    {
+        List<PlantLogic> alpha = new List<PlantLogic>(list);
+        for (int i = 0; i < list.Count; i++)
+        {
+            PlantLogic temp = alpha[i];
+            int randomIndex = Random.Range(i, list.Count);
+            alpha[i] = alpha[randomIndex];
+            alpha[randomIndex] = temp;
+        }
+
+        return alpha;
+    }
+
+    private IEnumerator PlantReproduction(List<PlantLogic> reproducingPlants)
+    {
+        float timeBetweenSpawns = TimeManager.instance.GetSeasonDuration()/reproducingPlants.Count;
+        foreach (PlantLogic plant in PlantListRandomiser(reproducingPlants))
+        {
+            SpawnPlant(plant);
+            yield return new WaitForSeconds(timeBetweenSpawns);
+        }
+    }
+
+    private void PlantReproduction(FlowerType flowerType)
     {
         List<PlantLogic> reproducingPlants = new List<PlantLogic>();
         foreach (PlantLogic plant in plants)
         {
-            if (plant.IsPollinated())
+            if (plant.IsPollinated() && plant.GetFlowerType() == flowerType)
+            {
                 reproducingPlants.Add(plant);
-            plant.CompletedReproduction();
+                plant.CompletedReproduction();
+            }
+                
+            
         }
         foreach (PlantLogic plant in reproducingPlants)
         {
             SpawnPlant(plant);
         }
+    }
+
+    private void PlantReproductionIncremental(FlowerType flowerType)
+    {
+        List<PlantLogic> reproducingPlants = new List<PlantLogic>();
+        foreach (PlantLogic plant in plants)
+        {
+            if (plant.IsPollinated() && plant.GetFlowerType() == flowerType)
+            {
+                reproducingPlants.Add(plant);
+                plant.CompletedReproduction();
+            }
+
+
+        }
+
+        StartCoroutine(PlantReproduction(reproducingPlants));
     }
 
     private void SpawnPlant(PlantLogic plantTemplate)
@@ -231,10 +328,16 @@ public class EcosystemLogic : TimeManagerObserver
             plant.transform.eulerAngles = new Vector3(0,Random.Range(0, 360),0);
 
             plants.Add(plant);
+
+            if (plant.GetFlowerType() == FlowerType.Fertility)
+            {
+                grassGrowthManager.CreateCustomGrassNode(position);
+            }
+            //if this plant is a fertility plant, then create a custom Grass Node at this location
         }
     }
 
-    private bool PlantPositionViable(Vector3 position)
+    private bool PlantPositionViable(Vector3 position, PlantLogic parentPlant)
     {
         if (IsOutOfBounds(position))
             return false;
@@ -246,11 +349,11 @@ public class EcosystemLogic : TimeManagerObserver
 
         foreach (PlantLogic plant in plants)
         {
-            if (Vector3.Distance(position, plant.transform.position) < plant.plantSpawnBoundary)
+            if (Vector3.Distance(position, plant.transform.position) < (plant.plantSpawnBoundary + parentPlant.plantSpawnBoundary))
                 return false;
         }
 
-        if (!grassGrowthManager.WithinRangeOfGrass(position))
+        if (parentPlant.GetFlowerType() != FlowerType.Fertility && !grassGrowthManager.WithinRangeOfGrass(position))
             return false;
 
         if (IsPositionOverNoGrow(position))
@@ -329,26 +432,114 @@ public class EcosystemLogic : TimeManagerObserver
         int xdirection = (Random.Range(0, 6) > 2) ? -1 : 1;
         int zdirection = (Random.Range(0, 6) > 2) ? -1 : 1;
 
-        //Debug.Log(string.Format("x direction: {0}, z direction: {1}", xdirection, zdirection));
 
         //uses a spiral equation to generate points to test for eligibility
         float theta;
         float radius;
-        for (int i=0; i<5; i++)
+        for (int i=0; i<6; i++)
         {
             theta = (i / 2f) + 3;
             radius = (float)1.618 * Mathf.Exp((2 / Mathf.PI) * theta);
             testPosition.x = (xdirection*radius * Mathf.Cos(theta)) + plantTemplate.transform.position.x;
             testPosition.y = plantTemplate.transform.position.y;
             testPosition.z = (zdirection*radius * Mathf.Sin(theta)) + plantTemplate.transform.position.z;
-            if (PlantPositionViable(testPosition))
+            if (PlantPositionViable(testPosition, plantTemplate))
             {
-                //Debug.Log(string.Format("Making flower at: X; {0}, Z; {1}, R; {2}, i; {3}", testPosition.x, testPosition.z, radius, i));
                 testPosition = ConformPositionToGround(testPosition);
                 return testPosition;
             }
         }
 
         return Vector3.zero;
+    }
+
+
+    //Observer Methods
+    public override void SeasonChanged(Season season)
+    {
+        if (season == Season.Wax)
+        {
+            GrassReproduction();
+            PlantReproductionIncremental(FlowerType.Fertility);
+            PlantReproductionIncremental(FlowerType.Health);
+        }
+        if (season == Season.Wane)
+        {
+            PlantReproductionIncremental(FlowerType.Lethality);
+        }
+    }
+
+    public override void SeasonLerp(Season season, float seasonProgressed)
+    {
+        if (season == Season.Wax)
+        {
+            if (seasonProgressed <= 0.33f)
+            {
+                float modLerp = 0.5f + seasonProgressed / 0.66f;
+                grassHeight = Mathf.Lerp(waneHeight, waxHeight, modLerp);
+                grassWidth = Mathf.Lerp(waneWidth, waxWidth, modLerp);
+                grassTesselationAmount = 9;
+                grassBendAmount = Mathf.Lerp(waneBend, waxBend, modLerp);
+                topColour = Color.Lerp(ColourData.instance.winterTopGrass, ColourData.instance.springTopGrass, modLerp);
+                bottomColour = Color.Lerp(ColourData.instance.winterBottomGrass, ColourData.instance.springBottomGrass, modLerp);
+                SetGlobalShaderVariables();
+            }
+            else if (seasonProgressed <= 0.67f)
+            {
+                grassHeight = waxHeight;
+                grassWidth = waxWidth;
+                grassTesselationAmount = 9;
+                grassBendAmount = waxBend;
+                topColour = ColourData.instance.springTopGrass;
+                bottomColour = ColourData.instance.springBottomGrass;
+                SetGlobalShaderVariables();
+            }
+            else
+            {
+                float modLerp = (seasonProgressed -0.67f) / 0.66f;
+                grassHeight = Mathf.Lerp(waxHeight, waneHeight, modLerp);
+                grassWidth = Mathf.Lerp(waxWidth, waneWidth, modLerp);
+                grassTesselationAmount = 9;
+                grassBendAmount = Mathf.Lerp(waxBend, waneBend, modLerp);
+                topColour = Color.Lerp(ColourData.instance.springTopGrass, ColourData.instance.winterTopGrass, modLerp);
+                bottomColour = Color.Lerp(ColourData.instance.springBottomGrass, ColourData.instance.winterBottomGrass, modLerp);
+                SetGlobalShaderVariables();
+            }
+        }
+        else if (season == Season.Wane)
+        {
+            if (seasonProgressed <= 0.33f)
+            {
+                float modLerp = 0.5f + (seasonProgressed) / 0.66f;
+                grassHeight = Mathf.Lerp(waxHeight, waneHeight, modLerp);
+                grassWidth = Mathf.Lerp(waxWidth, waneWidth, modLerp);
+                grassTesselationAmount = 9;
+                grassBendAmount = Mathf.Lerp(waxBend, waneBend, modLerp);
+                topColour = Color.Lerp(ColourData.instance.springTopGrass, ColourData.instance.winterTopGrass, modLerp);
+                bottomColour = Color.Lerp(ColourData.instance.springBottomGrass, ColourData.instance.winterBottomGrass, modLerp);
+                SetGlobalShaderVariables();
+            }
+            else if (seasonProgressed <= 0.67f)
+            {
+                grassHeight = waneHeight;
+                grassWidth = waneWidth;
+                grassTesselationAmount = 9;
+                grassBendAmount = waneBend;
+                topColour = ColourData.instance.winterTopGrass;
+                bottomColour = ColourData.instance.winterBottomGrass;
+                SetGlobalShaderVariables();
+            }
+            else
+            {
+                float modLerp = (seasonProgressed - 0.67f) / 0.66f;
+                grassHeight = Mathf.Lerp(waneHeight, waxHeight, modLerp);
+                grassWidth = Mathf.Lerp(waneWidth, waxWidth, modLerp);
+                grassTesselationAmount = 9;
+                grassBendAmount = Mathf.Lerp(waneBend, waxBend, modLerp);
+                topColour = Color.Lerp(ColourData.instance.winterTopGrass, ColourData.instance.springTopGrass, modLerp);
+                bottomColour = Color.Lerp(ColourData.instance.winterBottomGrass, ColourData.instance.springBottomGrass, modLerp);
+                SetGlobalShaderVariables();
+            }
+        }
     }
 }

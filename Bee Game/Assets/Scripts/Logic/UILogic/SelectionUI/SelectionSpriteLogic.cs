@@ -8,6 +8,7 @@ public class SelectionSpriteLogic : MonoBehaviour
     [SerializeField]
     private SpriteRenderer template;
     private List<SpriteRenderer> selectionSprites = new List<SpriteRenderer>();
+    private List<FriendlinessType> friendlinessTypes = new List<FriendlinessType>();
     private List<SelectableLogic> selectedObjects = new List<SelectableLogic>();
 
     private void Start()
@@ -21,6 +22,15 @@ public class SelectionSpriteLogic : MonoBehaviour
         foreach (SpriteRenderer spr in selectionSprites)
         {
             spr.gameObject.SetActive(false);
+        }
+    }
+
+    private void UpdateFriendlinessList()
+    {
+        friendlinessTypes.Clear();
+        foreach (SelectableLogic selected in selectedObjects)
+        {
+            friendlinessTypes.Add(PlayerLogic.instance.factionLogic.GetFriendlinessOfSelectable(selected));
         }
     }
 
@@ -43,6 +53,12 @@ public class SelectionSpriteLogic : MonoBehaviour
             selectionSprites[i].gameObject.SetActive(true);
             selectionSprites[i].transform.position = selected.GetUIPosition().position;
             selectionSprites[i].transform.localScale = selected.GetUIScale()*Vector3.one;
+            if (friendlinessTypes[i] == FriendlinessType.Friendly)
+                selectionSprites[i].color = ColourData.instance.friendly;
+            else if (friendlinessTypes[i] == FriendlinessType.Hostile)
+                selectionSprites[i].color = ColourData.instance.hostile;
+            else
+                selectionSprites[i].color = ColourData.instance.neutral;
             i++;
         }
     }
@@ -59,6 +75,7 @@ public class SelectionSpriteLogic : MonoBehaviour
         if (!selectedObjects.Contains(obj))
         {
             selectedObjects.Add(obj);
+            UpdateFriendlinessList();
             UpdateSpriteLocations();
         }        
     }
@@ -66,11 +83,12 @@ public class SelectionSpriteLogic : MonoBehaviour
     public void SetSelectedObjects(List<SelectableLogic> obj)
     {
         selectedObjects = obj;
+        UpdateFriendlinessList();
         HideSprites();
         UpdateSpriteLocations();
     }
 
-    private void Update()
+    private void FixedUpdate()
     {
         UpdateSpriteLocations();
     }

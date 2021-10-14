@@ -20,11 +20,15 @@ public class ColourData : MonoBehaviour
     public Color springTopGrass;
     public Color springBottomGrass;
 
+    public Color honey;
+
     public Color friendly;
     public Color hostile;
     public Color neutral;
 
     public Material GrowthMaskMaterial;
+
+    public List<Sprite> beeGrowthStages = new List<Sprite>();
 
     private void Awake()
     {

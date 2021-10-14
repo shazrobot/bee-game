@@ -19,7 +19,7 @@ public class SelectableLogic : MonoBehaviour
     private protected bool dead = false;
 
     private float healthRegenCounter = 0;
-    private int healthRegenAmount = 2;
+    private int healthRegenAmount = 1;
     private float healthRegenTime = 5f;
 
     protected virtual void Awake()

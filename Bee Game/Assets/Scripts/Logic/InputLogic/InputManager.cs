@@ -80,6 +80,17 @@ public class InputManager : MonoBehaviour
         CameraControlLogic.instance.Move(Time.unscaledDeltaTime, forward, right);
     }
 
+    private void HandleMiscKeyboardInput()
+    {
+        if (Input.GetKeyDown(KeyCode.A))
+        {
+            SelectionManager.instance.InitiateAttackCommandMode();
+        }
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            SelectionManager.instance.LeaveAttackCommandMode();
+        }
+    }
     private void HandleSelectableMouseOver()
     {
         ray = Camera.main.ScreenPointToRay(Input.mousePosition);
@@ -89,11 +100,11 @@ public class InputManager : MonoBehaviour
             SelectableLogic selected = rayHit.collider.gameObject.GetComponent<SelectableLogic>();
             if (selected != null)
             {
-                MouseOverSpriteLogic.instance.SetTarget(selected.GetUIPosition(), selected.GetUIScale());
+                MouseOverSpriteLogic.instance.SetTarget(PlayerLogic.instance.factionLogic.GetFriendlinessOfSelectable(selected), selected.GetUIPosition(), selected.GetUIScale());
                 return;
             }
         }
-        MouseOverSpriteLogic.instance.SetTarget();
+        MouseOverSpriteLogic.instance.SetTarget(FriendlinessType.None);
     }
 
     public void EnterBuildMode()
@@ -116,10 +127,18 @@ public class InputManager : MonoBehaviour
     {
         HandleMovementKeyboardInput();
         HandleMovementMouseInput();
+        HandleMiscKeyboardInput();
         if (!buildMode)
         {
-            SelectionManager.instance.HandleIssueCommandsRightClick();
-            SelectionManager.instance.HandleMouseSelectionInput();
+            if (!SelectionManager.instance.GetAttackCommandMode())
+            {
+                SelectionManager.instance.HandleIssueCommandsRightClick();
+                SelectionManager.instance.HandleMouseSelectionInput();
+            }
+            else
+            {
+                SelectionManager.instance.HandleAttackMoveCommands();
+            }
             HandleSelectableMouseOver();
         }
         else

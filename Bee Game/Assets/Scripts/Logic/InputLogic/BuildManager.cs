@@ -8,6 +8,8 @@ public class BuildManager : MonoBehaviour
 
     public GameObject hiveBuildDisplayModel;
 
+    public GameObject hiveBuildFrame;
+
     private Ray ray;
     private RaycastHit rayHit;
     private float maxRayDistance = 1000.0f;
@@ -16,6 +18,7 @@ public class BuildManager : MonoBehaviour
     {
         instance = this;
         hiveBuildDisplayModel.SetActive(false);
+        hiveBuildFrame.SetActive(false);
     }
 
     public void HandleMouseLeftClick()
@@ -87,10 +90,8 @@ public class BuildManager : MonoBehaviour
                 location.HideHiveLocation();
                 location.gameObject.SetActive(false);
             }
-                
-            
-            
         }
+        hiveBuildFrame.SetActive(true);
         //show build position sparkle
     }
 
@@ -101,6 +102,7 @@ public class BuildManager : MonoBehaviour
             location.HideHiveLocation();
             location.gameObject.SetActive(false);
         }
+        hiveBuildFrame.SetActive(false);
         hiveBuildDisplayModel.SetActive(false);
         InputManager.instance.ExitBuildMode();
     }

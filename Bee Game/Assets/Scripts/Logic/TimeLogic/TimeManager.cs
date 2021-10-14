@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum Season { Summer, Autumn, Winter, Spring}
+public enum Season { Wax, Wane}
 
 public class TimeManager : MonoBehaviour
 {
@@ -11,52 +11,63 @@ public class TimeManager : MonoBehaviour
 
     public List<TimeManagerObserver> observers;
 
-    public bool seasonProgressed;
-    public bool monthProgressed;
-    public bool dayProgressed;
-
     public int timeScaleInt;
 
-    private DateTime date;
-
-    private double secondsElapsed;
-    private double prevTime;
     private Season season;
-    private int month;
-    private int day;
 
     private int scaleMin = 0;
     private int scaleMax = 4;
 
     private int oldTimeScale;
 
-    public DateTime GetDate()
+
+    //New Parameters
+
+    private float seasonLength = 45f; //in seconds
+    private float seasonCounter = 0;
+
+    private Season currentSeason;
+
+    void Awake()
     {
-        return date;
+        instance = this;
+        season = Season.Wax;
+        timeScaleInt = 1;
+        NotifySeasonChange();
+        NotifyAnyChange();
     }
 
-    public int GetMonth()
+    void FixedUpdate()
     {
-        return date.Month;
+        seasonCounter += Time.deltaTime;
+
+        if (seasonCounter >= seasonLength)
+        {
+            AdvanceSeason();
+        }
+
+        NotifyAnyChange();
     }
 
-    public int GetDay()
+
+    private void AdvanceSeason()
     {
-        return date.Day;
+        seasonCounter = 0;
+        season = (season == Season.Wax) ? Season.Wane : Season.Wax;
+        NotifySeasonChange();
     }
 
-    //0 for first season 3 for last
+    //0 for first season 1 for last
     public Season GetSeason()
     {
-        return (Season)((date.Month-1)/3);
+        return currentSeason;
     }
 
-    //returns what percentage of the year has elapsed
-    public float GetYearProgress()
+    public float GetSeasonDuration()
     {
-        return ((float)date.DayOfYear) / 365.0f;
+        return seasonLength;
     }
-    
+
     public int GetTimeScale()
     {
         return timeScaleInt;
@@ -99,78 +110,9 @@ public class TimeManager : MonoBehaviour
         Time.timeScale = timeScaleInt;
     }
 
-    void Awake()
-    {
-        instance = this;
-        date = new DateTime(1, 1, 1);
-        season = Season.Summer;
-        month = 1;
-        day = 1;
-        timeScaleInt = 1;
-    }
-
-    void Update()
-    {
-        if (month != GetMonth())
-        {
-            monthProgressed = true;
-            month = GetMonth();
-        }
-        else
-        {
-            monthProgressed = false;
-        }
-
-        if (season != GetSeason())
-        {
-            seasonProgressed = true;
-            season = GetSeason();
-            NotifySeasonChange();
-        }
-        else
-        {
-            seasonProgressed = false;
-        }
-
-        if (day != GetDay())
-        {
-            dayProgressed = true;
-            day = GetDay();
-            NotifyDayChange();
-        }
-        else
-        {
-            dayProgressed = false;
-        }
-
-        prevTime = (int)secondsElapsed;
-        secondsElapsed += Time.deltaTime;
-        if (prevTime < (int)secondsElapsed)
-        {
-            date = date.AddDays(1);
-        }
-    }
-
     private float SeasonProgress()
     {
-        int monthsPreSeason = ((int)season) * 3;
-
-        float seasonLength = (DateTime.DaysInMonth(date.Year, monthsPreSeason+1) + 
-            DateTime.DaysInMonth(date.Year, monthsPreSeason + 2) + 
-            DateTime.DaysInMonth(date.Year, monthsPreSeason + 3));
-
-        int monthsIntoSeason = date.Month - monthsPreSeason;
-
-        float daysProgressed = date.Day;
-        for (int i=0; i < monthsIntoSeason-1; i++)
-        {
-            daysProgressed += DateTime.DaysInMonth(date.Year, monthsPreSeason + i + 1);
-        }
-
-
-
-        return daysProgressed/ seasonLength;
-        //DateTime.DaysInMonth
+        return seasonCounter / seasonLength;
     }
 
     private void NotifySeasonChange()
@@ -181,7 +123,7 @@ public class TimeManager : MonoBehaviour
         }
     }
 
-    private void NotifyDayChange()
+    private void NotifyAnyChange()
     {
         foreach (TimeManagerObserver observer in observers)
         {

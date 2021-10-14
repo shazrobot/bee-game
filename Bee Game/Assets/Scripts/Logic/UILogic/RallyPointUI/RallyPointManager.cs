@@ -10,6 +10,7 @@ public class RallyPointManager : MonoBehaviour
     private List<RallyPoint> rallyPoints = new List<RallyPoint>();
     private List<CreatureLogic> creatureList = new List<CreatureLogic>();
 
+    public AnimationCurve curve = new AnimationCurve();
 
     public LineRenderer line;
 
@@ -30,7 +31,7 @@ public class RallyPointManager : MonoBehaviour
         rallyPoints.Clear();
     }
 
-    private void AddNewRallyPoint(Vector3 point)
+    private RallyPoint AddNewRallyPoint(Vector3 point)
     {
         RallyPoint rallyPoint = Instantiate(template) as RallyPoint;
 
@@ -40,24 +41,27 @@ public class RallyPointManager : MonoBehaviour
         rallyPoint.transform.SetParent(template.transform.parent, false);
 
         rallyPoints.Add(rallyPoint);
+        return rallyPoint;
     }
 
-    private void RedrawRallyPoints()
+    private void RedrawRallyPoints(Vector3 newPoint)
     {
         DeleteRallyPoints();
         foreach (CreatureLogic creature in creatureList)
         {
             foreach (MoveCommand command in creature.moveCommands)
             {
-                AddNewRallyPoint(command.GetDestination());
+                RallyPoint rallyPoint = AddNewRallyPoint(command.GetDestination());
+                if (command.GetDestination() == newPoint)
+                    rallyPoint.AnimateOuterBounce();
             }
         }
     }
 
     //add a bunch of rally points based on vector3 list
-    public void GenerateRallyPoints(List<CreatureLogic> creatures)
+    public void GenerateRallyPoints(List<CreatureLogic> creatures, Vector3 newPoint)
     {
-        RedrawRallyPoints();
+        RedrawRallyPoints(newPoint);
         creatureList = creatures;
     }
 
@@ -65,12 +69,7 @@ public class RallyPointManager : MonoBehaviour
     {
         if (creatureList.Contains(creature))
         {
-            RedrawRallyPoints();
+            RedrawRallyPoints(Vector3.zero);
         }
     }
-
-    //public void Update()
-    //{
-    //    RedrawRallyPoints();
-    //}
 }

@@ -160,6 +160,7 @@ public class HiveLogic : SelectableLogic
             currentHealth = maxHealth;
         else if (currentHealth <= 0)
         {
+            SelectionManager.instance.SelectableDied(this);
             if (location != null)
                 location.Unoccupy();
             //make the hive location available again

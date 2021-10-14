@@ -7,7 +7,6 @@ public class GrowthHexUILogic : MonoBehaviour
 {
     public Image honeyProgressBar;
     public Image growthSymbol;
-    public List<Sprite> growthStages;
     private float growthStepTime = 0;
     private float progressPercentage = 0;
 
@@ -21,11 +20,12 @@ public class GrowthHexUILogic : MonoBehaviour
     {
         progressPercentage = currentTime / growthTimeTotal;
         honeyProgressBar.fillAmount = progressPercentage;
+        honeyProgressBar.color = ColourData.instance.honey;
     }
 
     private void SetGrowthSprite(float growthTimeTotal, float currentTime)
     {
-        growthStepTime = growthTimeTotal / (float)growthStages.Count;
-        growthSymbol.sprite = growthStages[(int)(currentTime/ growthStepTime)];
+        growthStepTime = growthTimeTotal / (float)ColourData.instance.beeGrowthStages.Count;
+        growthSymbol.sprite = ColourData.instance.beeGrowthStages[(int)(currentTime/ growthStepTime)];
     }
 }

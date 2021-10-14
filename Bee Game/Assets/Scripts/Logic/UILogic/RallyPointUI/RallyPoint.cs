@@ -5,57 +5,33 @@ using UnityEngine.UI;
 
 public class RallyPoint : MonoBehaviour
 {
-    public LineRenderer baseCircle;
-    public LineRenderer shaft;
-    public SpriteRenderer top;
+    public GameObject middle;
+    public GameObject outer;
+
 
     public Vector3 point;
     public float baseWidth;
 
     private float circleYHeight = 0.1f;
 
-    private Vector3[] GenerateBaseCirclePositions()
+    private void PositionMiddle()
     {
-        float circMul = (Mathf.Sqrt(3) / 2f);
-        Vector3[] tempList = new Vector3[13];
-        tempList[0] = (new Vector3(point.x+baseWidth, circleYHeight, point.z));
-        tempList[1] = (new Vector3(point.x + (baseWidth* circMul), circleYHeight, point.z + (baseWidth * 0.5f)));
-        tempList[2] = (new Vector3(point.x + (baseWidth * 0.5f), circleYHeight, point.z + (baseWidth * circMul)));
-        tempList[3] = (new Vector3(point.x , circleYHeight, point.z + baseWidth));
-        tempList[4] = (new Vector3(point.x + (baseWidth * -0.5f), circleYHeight, point.z + (baseWidth * circMul)));
-        tempList[5] = (new Vector3(point.x + (baseWidth * -circMul), circleYHeight, point.z + (baseWidth * 0.5f)));
-        tempList[6] = (new Vector3(point.x - baseWidth, circleYHeight, point.z));
-        tempList[7] = (new Vector3(point.x + (baseWidth * -circMul), circleYHeight, point.z + (baseWidth * -0.5f)));
-        tempList[8] = (new Vector3(point.x + (baseWidth * -0.5f), circleYHeight, point.z + (baseWidth * -circMul)));
-        tempList[9] = (new Vector3(point.x, circleYHeight, point.z - baseWidth));
-        tempList[10] = (new Vector3(point.x + (baseWidth * 0.5f), circleYHeight, point.z + (baseWidth * -circMul)));
-        tempList[11] = (new Vector3(point.x + (baseWidth * circMul), circleYHeight, point.z + (baseWidth * -0.5f)));
-        tempList[12] = (new Vector3(point.x + baseWidth, circleYHeight, point.z));
-        return tempList;
+        middle.transform.position = point;
+        middle.transform.LookAt(Camera.main.transform.position, -Vector3.up);
     }
 
-    private Vector3[] GenerateShaftPositions()
+    private void PositionOuter()
     {
-        Vector3[] tempList = new Vector3[2];
-        tempList[0] = (new Vector3(point.x, circleYHeight, point.z));
-        tempList[1] = point;
-        return tempList;
-    }
-
-    private void PositionTop()
-    {
-        top.transform.position = point;
-        top.transform.LookAt(Camera.main.transform.position, -Vector3.up);
+        outer.transform.position = point;
+        outer.transform.LookAt(Camera.main.transform.position, -Vector3.up);
     }
 
     private void Draw()
     {
-        baseCircle.gameObject.SetActive(false);
-        //baseCircle.SetPositions(GenerateBaseCirclePositions());
-        shaft.gameObject.SetActive(false);
-        //shaft.SetPositions(GenerateShaftPositions());
-        top.gameObject.SetActive(true);
-        PositionTop();
+        middle.gameObject.SetActive(true);
+        outer.gameObject.SetActive(true);
+        PositionOuter();
+        PositionMiddle();
     }
 
     public void SetRallyPoint(Vector3 pt)
@@ -67,7 +43,13 @@ public class RallyPoint : MonoBehaviour
 
     public void DestroyChildren()
     {
-        Destroy(baseCircle.gameObject);
-        Destroy(shaft.gameObject);
+        Destroy(outer);
+        Destroy(middle);
+    }
+
+    public void AnimateOuterBounce()
+    {
+        StartCoroutine(UIAnimations.BounceScaleAnimation(outer.transform.localScale.x * 3, outer.transform.localScale.x, 0.5f, outer));
+        //have an outer ring which you trigger a ui animation coroutine for
     }
 }

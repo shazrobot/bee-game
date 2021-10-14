@@ -13,7 +13,7 @@ public class HiveBuildLocation : MonoBehaviour
     void Start()
     {
         emphasisSprite.SetActive(false);
-        EcosystemLogic.instance.AddHiveBuildLocation(this);
+        //EcosystemLogic.instance.AddHiveBuildLocation(this);
     }
 
     public bool IsOccupied()

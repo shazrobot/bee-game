@@ -4,11 +4,6 @@ using UnityEngine;
 
 public class NoGrow : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
-    {
-        EcosystemLogic.instance.noGrowObjects.Add(this);
-    }
 
     //needs a mesh renderer and also needs a collider
     private void DuplicateSelf()
