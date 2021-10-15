@@ -56,7 +56,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
-    - _BottomHeight: 0
+    - _BottomHeight: -1
     - _BumpScale: 1
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
@@ -71,13 +71,13 @@ Material:
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
-    - _TopHeight: 20
+    - _TopHeight: 1
     - _UVSec: 0
     - _ZWrite: 1
     m_Colors:
     - _BottomColor: {r: 0.3019608, g: 0.2235484, b: 0.19627452, a: 1}
     - _Color: {r: 0.2, g: 0.2, b: 0.18039216, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _FertileBottomColor: {r: 0.3019608, g: 0.17653091, b: 0.12078431, a: 1}
-    - _FertileTopColor: {r: 0.4509804, g: 0.2610939, b: 0.18039215, a: 1}
+    - _FertileBottomColor: {r: 0.3019608, g: 0.15491901, b: 0.09058824, a: 1}
+    - _FertileTopColor: {r: 0.4509804, g: 0.23137257, b: 0.13529412, a: 1}
     - _TopColor: {r: 0.4509804, g: 0.34117648, b: 0.29313725, a: 1}

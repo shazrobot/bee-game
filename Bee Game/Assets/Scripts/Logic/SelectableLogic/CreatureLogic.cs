@@ -49,6 +49,9 @@ public class CreatureLogic : SelectableLogic
 
     private FlowerType previouslyPollinated = FlowerType.None;
 
+    //private delegate void SelectableDelegate(SelectableLogic selectable);
+    //private SelectableDelegate selectableDelegateFunction;
+
     protected override void Awake()
     {
         base.Awake();
@@ -226,7 +229,7 @@ public class CreatureLogic : SelectableLogic
                 }
                 else if (moveCommands[0].moveType == MoveType.Attack)
                 {
-                    AttackObjective(moveCommands[0].objective);
+                    InitiateAttackOnObjective(moveCommands[0].objective);
                 }
             }
         }
@@ -430,7 +433,9 @@ public class CreatureLogic : SelectableLogic
 
         if (attackCooldownCounter <= 0)
         {
-            animations.PlayAttackAnimation();
+            //selectableDelegateFunction = AttackLandedOnObjective;
+            //selectableDelegateFunction(selectable);
+            animations.PlayAttackAnimation(AttackLandedOnObjective, selectable);
             attackCooldownCounter = attackCooldown;
         }
 
@@ -440,9 +445,8 @@ public class CreatureLogic : SelectableLogic
         }
     }
 
-    private void AttackLandedOnObjective(GameObject objective)
+    private void AttackLandedOnObjective(SelectableLogic selectable)
     {
-        SelectableLogic selectable = objective.GetComponent<SelectableLogic>();
 
         float damage = (attackPoweredUp) ? -attack - lethalityDamageBuff : -attack;
         if (selectable.GetComponent<CreatureLogic>() != null)
@@ -458,6 +462,8 @@ public class CreatureLogic : SelectableLogic
         {
             DequeueGoal();
         }
+
+
     }
 
     private void AttackObjective(GameObject objective)
@@ -466,7 +472,7 @@ public class CreatureLogic : SelectableLogic
 
         if (attackCooldownCounter <= 0)
         {
-            animations.PlayAttackAnimation();
+            //animations.PlayAttackAnimation();
             float damage = (attackPoweredUp) ? -attack - lethalityDamageBuff : -attack;
             if(selectable.GetComponent<CreatureLogic>() != null)
             {

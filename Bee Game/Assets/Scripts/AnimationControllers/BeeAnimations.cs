@@ -28,6 +28,11 @@ public class BeeAnimations : MonoBehaviour
     private int gatheringHash = 0;
 
     private float attackCounter = 0f;
+
+    public delegate void SelectableDelegate(SelectableLogic selectable);
+    private SelectableDelegate selectableDelegateFunction;
+    private SelectableLogic actionTarget;
+
     private void Start()
     {
         HidePollen();
@@ -44,7 +49,7 @@ public class BeeAnimations : MonoBehaviour
             attackCounter += Time.deltaTime;
             if(attackCounter > (attackLength / 2f))
             {
-                //attack frame (do damage here)
+                selectableDelegateFunction(actionTarget);
                 StopAttackAnimation();
             }
         }
@@ -66,8 +71,10 @@ public class BeeAnimations : MonoBehaviour
         }
     }
 
-    public void PlayAttackAnimation()
+    public void PlayAttackAnimation(SelectableDelegate del, SelectableLogic selectable)
     {
+        selectableDelegateFunction = del;
+        actionTarget = selectable;
         attackCounter = 0f;
         animatorController.SetBool(attackingHash, true);
     }

@@ -24,6 +24,9 @@ Shader "Custom/GrassGeometry"
 		_BladeForward("Blade Forward Amount", Float) = 0.38
 		_BladeCurve("Blade Curvature Amount", Range(1, 4)) = 2
 
+
+		//_GrassOffsetX("Grass Offset X", Float) = 325
+		//_GrassOffsetZ("Grass Offset Z", Float) = 325
 		//_FertilityFitler("Fertility Filter Active", Boolean) = true
 	}
 
@@ -61,6 +64,9 @@ Shader "Custom/GrassGeometry"
 	float _SeasonalGrassHeight; //equivalent of _BladeHeight
 	float _SeasonalGrassWidth; //equivalent of _BladeWidth
 	int _SeasonalGrassBend; //equivalent of _BladeForward
+
+	//float _GrassOffsetX;
+	//float _GrassOffsetZ;
 
 
 	// Simple noise function, sourced from http://answers.unity.com/answers/624136/view.html
@@ -133,6 +139,11 @@ Shader "Custom/GrassGeometry"
 	void geo(triangle vertexOutput IN[3], inout TriangleStream<geometryOutput> triStream)
 	{
 		float3 pos = IN[0].vertex;
+
+		//float3 worldOffset = float3(_GrassOffsetX, 0, _GrassOffsetZ);
+
+		//pos += worldOffset;
+
 		float3 vNormal = IN[0].normal;
 		float4 vTangent = IN[0].tangent;
 		float3 vBinormal = cross(vNormal, vTangent) * vTangent.w;

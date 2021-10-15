@@ -478,7 +478,7 @@ public class EcosystemLogic : TimeManagerObserver
                 float modLerp = 0.5f + seasonProgressed / 0.66f;
                 grassHeight = Mathf.Lerp(waneHeight, waxHeight, modLerp);
                 grassWidth = Mathf.Lerp(waneWidth, waxWidth, modLerp);
-                grassTesselationAmount = 9;
+                //grassTesselationAmount = 9;
                 grassBendAmount = Mathf.Lerp(waneBend, waxBend, modLerp);
                 topColour = Color.Lerp(ColourData.instance.winterTopGrass, ColourData.instance.springTopGrass, modLerp);
                 bottomColour = Color.Lerp(ColourData.instance.winterBottomGrass, ColourData.instance.springBottomGrass, modLerp);
@@ -488,7 +488,7 @@ public class EcosystemLogic : TimeManagerObserver
             {
                 grassHeight = waxHeight;
                 grassWidth = waxWidth;
-                grassTesselationAmount = 9;
+                //grassTesselationAmount = 9;
                 grassBendAmount = waxBend;
                 topColour = ColourData.instance.springTopGrass;
                 bottomColour = ColourData.instance.springBottomGrass;
@@ -499,7 +499,7 @@ public class EcosystemLogic : TimeManagerObserver
                 float modLerp = (seasonProgressed -0.67f) / 0.66f;
                 grassHeight = Mathf.Lerp(waxHeight, waneHeight, modLerp);
                 grassWidth = Mathf.Lerp(waxWidth, waneWidth, modLerp);
-                grassTesselationAmount = 9;
+                //grassTesselationAmount = 9;
                 grassBendAmount = Mathf.Lerp(waxBend, waneBend, modLerp);
                 topColour = Color.Lerp(ColourData.instance.springTopGrass, ColourData.instance.winterTopGrass, modLerp);
                 bottomColour = Color.Lerp(ColourData.instance.springBottomGrass, ColourData.instance.winterBottomGrass, modLerp);
@@ -513,7 +513,7 @@ public class EcosystemLogic : TimeManagerObserver
                 float modLerp = 0.5f + (seasonProgressed) / 0.66f;
                 grassHeight = Mathf.Lerp(waxHeight, waneHeight, modLerp);
                 grassWidth = Mathf.Lerp(waxWidth, waneWidth, modLerp);
-                grassTesselationAmount = 9;
+                //grassTesselationAmount = 9;
                 grassBendAmount = Mathf.Lerp(waxBend, waneBend, modLerp);
                 topColour = Color.Lerp(ColourData.instance.springTopGrass, ColourData.instance.winterTopGrass, modLerp);
                 bottomColour = Color.Lerp(ColourData.instance.springBottomGrass, ColourData.instance.winterBottomGrass, modLerp);
@@ -523,7 +523,7 @@ public class EcosystemLogic : TimeManagerObserver
             {
                 grassHeight = waneHeight;
                 grassWidth = waneWidth;
-                grassTesselationAmount = 9;
+                //grassTesselationAmount = 9;
                 grassBendAmount = waneBend;
                 topColour = ColourData.instance.winterTopGrass;
                 bottomColour = ColourData.instance.winterBottomGrass;
@@ -534,7 +534,7 @@ public class EcosystemLogic : TimeManagerObserver
                 float modLerp = (seasonProgressed - 0.67f) / 0.66f;
                 grassHeight = Mathf.Lerp(waneHeight, waxHeight, modLerp);
                 grassWidth = Mathf.Lerp(waneWidth, waxWidth, modLerp);
-                grassTesselationAmount = 9;
+                //grassTesselationAmount = 9;
                 grassBendAmount = Mathf.Lerp(waneBend, waxBend, modLerp);
                 topColour = Color.Lerp(ColourData.instance.winterTopGrass, ColourData.instance.springTopGrass, modLerp);
                 bottomColour = Color.Lerp(ColourData.instance.winterBottomGrass, ColourData.instance.springBottomGrass, modLerp);
