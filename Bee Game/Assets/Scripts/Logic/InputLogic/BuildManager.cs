@@ -67,6 +67,10 @@ public class BuildManager : MonoBehaviour
                 if (!location.IsOccupied())
                 {
                     hiveBuildDisplayModel.SetActive(true);
+                    hiveBuildDisplayModel.transform.rotation = Quaternion.Euler(180, location.transform.rotation.eulerAngles.y+90, 0);
+
+                    //hiveBuildDisplayModel.transform.rotation = Quaternion.Euler(hiveBuildDisplayModel.transform.rotation.eulerAngles.x, location.transform.rotation.eulerAngles.y, 0);
+
                     hiveBuildDisplayModel.transform.position = location.transform.position;
                     return;
                 }

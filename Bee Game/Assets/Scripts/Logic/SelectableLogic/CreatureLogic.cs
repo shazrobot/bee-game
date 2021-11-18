@@ -5,6 +5,8 @@ using System.Security.Authentication.ExtendedProtection;
 using UnityEditor;
 using UnityEngine;
 
+public enum PollenationBuffType { None, Lethality, Ranged, Speed }
+
 public class CreatureLogic : SelectableLogic
 {
     //Creature Data
@@ -28,7 +30,7 @@ public class CreatureLogic : SelectableLogic
     private float attackCooldownCounter = 0f;
     private float attackCooldown = 2f;
 
-    private bool attackPoweredUp = false;
+    private PollenationBuffType pollenationBuff = PollenationBuffType.None;
     private float lethalityDamageBuff = 25f;
 
     private float aggroRange = 50f;
@@ -47,7 +49,12 @@ public class CreatureLogic : SelectableLogic
     [SerializeField]
     private BeeAnimations animations;
 
+    private float speedModifier = 1.5f;
+    private float rangedAttackDistance = 40f;
+
     private FlowerType previouslyPollinated = FlowerType.None;
+
+
 
     //private delegate void SelectableDelegate(SelectableLogic selectable);
     //private SelectableDelegate selectableDelegateFunction;
@@ -55,7 +62,7 @@ public class CreatureLogic : SelectableLogic
     protected override void Awake()
     {
         base.Awake();
-        SetLethality(false);
+        SetBuff(FlowerType.None);
     }
 
 
@@ -73,6 +80,11 @@ public class CreatureLogic : SelectableLogic
     public int GetPollenAmount()
     {
         return pollenGathered;
+    }
+
+    public bool IsIdle()
+    {
+        return moveCommands.Count == 0;
     }
 
 
@@ -201,10 +213,11 @@ public class CreatureLogic : SelectableLogic
         {
             tempFloat = distanceThreshold;
             if (moveCommands[0].moveType == MoveType.Attack)
-                tempFloat += attackRange;
+                tempFloat += (pollenationBuff == PollenationBuffType.Ranged) ? attackRange + rangedAttackDistance : attackRange;
             if (!MovementLogic.ReachedDestination(transform, moveCommands[0], tempFloat, GetRadius()))
             {
-                MovementLogic.MoveTowards(transform, moveSpeed, moveCommands[0].GetDestination(), GetRadius());
+                float moveAmount = (pollenationBuff == PollenationBuffType.Speed) ? moveSpeed * speedModifier :  moveSpeed;
+                MovementLogic.MoveTowards(transform, moveAmount, moveCommands[0].GetDestination(), GetRadius());
 
                 if (moveCommands[0].moveType == MoveType.AttackMove)
                 {
@@ -212,6 +225,7 @@ public class CreatureLogic : SelectableLogic
                     if (closestUnit != null)
                     {
                         FrontLoadGoal(new MoveCommand(MoveType.Attack, Vector3.zero, closestUnit.gameObject));
+                        //Debug.Log("move attacking a dude");
                     }
                 }
             }
@@ -250,7 +264,7 @@ public class CreatureLogic : SelectableLogic
 
         if (attackCooldownCounter > 0)
         {
-            attackCooldownCounter -= Time.deltaTime;
+            attackCooldownCounter -= (pollenationBuff == PollenationBuffType.Speed)? Time.deltaTime * speedModifier : Time.deltaTime;
             if (attackCooldownCounter < 0)
                 attackCooldownCounter = 0f;
         }
@@ -299,7 +313,7 @@ public class CreatureLogic : SelectableLogic
                 //if the dude already has all the pollen he can carry, then just turn it in
                 FinishGathering();
             }
-            gatherTimer += Time.deltaTime;
+            gatherTimer += (pollenationBuff == PollenationBuffType.Speed) ? Time.deltaTime * speedModifier : Time.deltaTime ;
             if (gatherTimer >= gatherTime)
             {
                 CollectPollen(plant);
@@ -315,10 +329,24 @@ public class CreatureLogic : SelectableLogic
         
     }
 
-    private void SetLethality(bool status)
+    private void SetBuff(FlowerType status)
     {
-        attackPoweredUp = status;
-        animations.SetRedStatus(status);
+        animations.SetBuffStatus(status, false);
+        if (status == FlowerType.Lethality)
+        {
+            pollenationBuff = PollenationBuffType.Lethality;
+            animations.SetBuffStatus(status, true);
+        }
+        else if (status == FlowerType.Expulsion)
+        {
+            pollenationBuff = PollenationBuffType.Ranged;
+            animations.SetBuffStatus(status, true);
+        }
+        else if (status == FlowerType.Rapidity)
+        {
+            pollenationBuff = PollenationBuffType.Speed;
+            animations.SetBuffStatus(status, true);
+        }
     }
 
     private void CollectPollen(PlantLogic plant)
@@ -330,9 +358,9 @@ public class CreatureLogic : SelectableLogic
         {
             ChangeHealth(plant.GetFlowerHealAmount());
         }
-        if (plant.GetFlowerType() == FlowerType.Lethality)
+        if ((plant.GetFlowerType() == FlowerType.Lethality || plant.GetFlowerType() == FlowerType.Expulsion || plant.GetFlowerType() == FlowerType.Rapidity) && plant.IsPollinated())
         {
-            SetLethality(true);
+            SetBuff(plant.GetFlowerType());
         }
         if(pollenGathered > 0)
         {
@@ -430,11 +458,13 @@ public class CreatureLogic : SelectableLogic
     private void InitiateAttackOnObjective(GameObject objective)
     {
         SelectableLogic selectable = objective.GetComponent<SelectableLogic>();
+        //transform.LookAt(selectable.GetUIPosition().position);
+        //transform.rotation.eulerAngles = new Vector3(-1*transform.rotation.eulerAngles.x, transform.rotation.eulerAngles.y, -1*transform.rotation.eulerAngles.z);
+        //transform.rotation.SetEulerAngles(transform.rotation.eulerAngles.x, -transform.rotation.eulerAngles.y,transform.rotation.eulerAngles.z);
 
+        MovementLogic.LookAt(transform, selectable.GetUIPosition().position);
         if (attackCooldownCounter <= 0)
         {
-            //selectableDelegateFunction = AttackLandedOnObjective;
-            //selectableDelegateFunction(selectable);
             animations.PlayAttackAnimation(AttackLandedOnObjective, selectable);
             attackCooldownCounter = attackCooldown;
         }
@@ -447,23 +477,40 @@ public class CreatureLogic : SelectableLogic
 
     private void AttackLandedOnObjective(SelectableLogic selectable)
     {
+        if (pollenationBuff == PollenationBuffType.Ranged)
+        {
+            ProjectileManager.instance.ShootProjectile(selectable, this);
+        }
+        else
+        {
+            float damage = (pollenationBuff == PollenationBuffType.Lethality) ? -attack - lethalityDamageBuff : -attack;
+            if (selectable.GetComponent<CreatureLogic>() != null)
+            {
+                selectable.GetComponent<CreatureLogic>().AttackedByBee(this);
+            }
+            selectable.ChangeHealth(damage);
+            /*
+            if (attackPoweredUp)
+                SetLethality(false);
+                */
+            if (selectable.IsDead())
+            {
+                DequeueGoal();
+            }
+        }
+    }
 
-        float damage = (attackPoweredUp) ? -attack - lethalityDamageBuff : -attack;
+    public void ProjectileLandedOnObjective(SelectableLogic selectable)
+    {
         if (selectable.GetComponent<CreatureLogic>() != null)
         {
             selectable.GetComponent<CreatureLogic>().AttackedByBee(this);
         }
-        selectable.ChangeHealth(damage);
-        
-        if (attackPoweredUp)
-            SetLethality(false);
-
+        selectable.ChangeHealth(-attack);
         if (selectable.IsDead())
         {
             DequeueGoal();
         }
-
-
     }
 
     private void AttackObjective(GameObject objective)
@@ -473,15 +520,17 @@ public class CreatureLogic : SelectableLogic
         if (attackCooldownCounter <= 0)
         {
             //animations.PlayAttackAnimation();
-            float damage = (attackPoweredUp) ? -attack - lethalityDamageBuff : -attack;
+            float damage = (pollenationBuff == PollenationBuffType.Lethality) ? -attack - lethalityDamageBuff : -attack;
             if(selectable.GetComponent<CreatureLogic>() != null)
             {
                 selectable.GetComponent<CreatureLogic>().AttackedByBee(this);
             }
             selectable.ChangeHealth(damage);
             attackCooldownCounter = attackCooldown;
+            /*
             if (attackPoweredUp)
                 SetLethality(false);
+            */
         }
 
         if (selectable.IsDead())

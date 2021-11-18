@@ -84,6 +84,18 @@ public class FactionLogic : MonoBehaviour
         return beeCap;
     }
 
+    public int GetQueuedBeeAmount()
+    {
+        int amount = 0;
+
+        foreach(HiveLogic hive in hives)
+        {
+            amount += hive.beeQueue;
+        }
+
+        return amount;
+    }
+
     public FriendlinessType GetFriendlinessOfSelectable(SelectableLogic selectable)
     {
         if(selectable.GetComponent<PlantLogic>() != null)
@@ -137,6 +149,98 @@ public class FactionLogic : MonoBehaviour
     public bool IsMyHive(HiveLogic hive)
     {
         return hives.Contains(hive);
+    }
+
+    public HiveLogic AlliesAroundAnyHive(float checkRadius)
+    {
+        foreach (HiveLogic hive in hives)
+        {
+            if (AlliesAroundHive(hive, checkRadius).Count == 0)
+            {
+                return hive;
+            }
+        }
+
+        return null;
+    }
+
+    public List<CreatureLogic> AlliesAroundHive(HiveLogic hive, float checkRadius)
+    {
+        List<CreatureLogic> allyList = new List<CreatureLogic>();
+
+        foreach (CreatureLogic bee in bees)
+        {
+            if (Vector3.Distance(hive.GetUIPosition().position, bee.GetUIPosition().position) < checkRadius)
+                allyList.Add(bee);
+        }
+        return allyList;
+    }
+
+    public HiveLogic EnemiesAroundAnyHive(float checkRadius)
+    {
+        foreach (HiveLogic hive in hives)
+        {
+            if(EnemiesAroundHive(hive, checkRadius).Count > 0)
+            {
+                return hive;
+            }
+        }
+
+        return null;
+    }
+
+    public List<CreatureLogic> EnemiesAroundHive(HiveLogic hive, float checkRadius)
+    {
+        List<CreatureLogic> enemyList = new List<CreatureLogic>();
+
+        foreach(FactionLogic faction in enemyFactions)
+        {
+            foreach(CreatureLogic bee in faction.bees)
+            {
+                if (Vector3.Distance(hive.GetUIPosition().position, bee.GetUIPosition().position) < checkRadius)
+                    enemyList.Add(bee);
+            }
+        }
+
+        return enemyList;
+    }
+
+    public List<CreatureLogic> EnemyBeesAroundPoint(Vector3 point, float checkRadius)
+    {
+        List<CreatureLogic> enemyList = new List<CreatureLogic>();
+
+        foreach (FactionLogic faction in enemyFactions)
+        {
+            foreach (CreatureLogic bee in faction.bees)
+            {
+                if (Vector3.Distance(point, bee.GetUIPosition().position) < checkRadius)
+                    enemyList.Add(bee);
+            }
+        }
+
+        return enemyList;
+    }
+
+    public List<SelectableLogic> AllEnemiesAroundPoint(Vector3 point, float checkRadius)
+    {
+        List<SelectableLogic> enemyList = new List<SelectableLogic>();
+
+        foreach (FactionLogic faction in enemyFactions)
+        {
+            foreach (CreatureLogic bee in faction.bees)
+            {
+                if (Vector3.Distance(point, bee.GetUIPosition().position) < checkRadius)
+                    enemyList.Add(bee);
+            }
+
+            foreach (HiveLogic hive in faction.hives)
+            {
+                if (Vector3.Distance(point, hive.GetUIPosition().position) < checkRadius)
+                    enemyList.Add(hive);
+            }
+        }
+
+        return enemyList;
     }
 
     //Updates
@@ -238,7 +342,7 @@ public class FactionLogic : MonoBehaviour
         hive.InitialiseConstruction();
         hive.transform.SetParent(beeTemplate.transform.parent);
         hive.transform.position = location.transform.position;
-
+        hive.transform.rotation = Quaternion.Euler(180, location.transform.rotation.eulerAngles.y + 90, 0);
         hives.Add(hive);
 
         location.Occupy();

@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum FlowerType { Fertility, Health, Lethality, None};
+public enum FlowerType { Fertility, Health, Lethality, None, Rapidity, Expulsion};
 
 public class PlantLogic : SelectableLogic
 {

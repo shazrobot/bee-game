@@ -46,8 +46,6 @@ public class EcosystemLogic : TimeManagerObserver
     [SerializeField]
     private Collider ground;
 
-
-
     //Grass parameters
 
     private float waxHeight = 6;
@@ -128,6 +126,34 @@ public class EcosystemLogic : TimeManagerObserver
             {
                 closest = plant;
                 dist = calc;
+            }
+        }
+        return closest;
+    }
+
+    public PlantLogic ClosestGatherablePlantWithShortestQueue(Vector3 position, CreatureLogic bee, float GatherRangeCutoff)
+    {
+        float dist = Mathf.Infinity;
+        int allocationSize = 1000;
+        float calc;
+        PlantLogic closest = null;
+        foreach (PlantLogic plant in plants)
+        {
+            calc = Vector3.Distance(plant.GetUIPosition().position, position);
+            if (plant.HasPollen() && calc < GatherRangeCutoff)
+            {
+                if (plant.GetGathererAllocationSizeExcludingBee(bee) < allocationSize)
+                {
+                    closest = plant;
+                    dist = calc;
+                    allocationSize = plant.GetGathererAllocationSizeExcludingBee(bee);
+                }
+
+                if (plant.GetGathererAllocationSizeExcludingBee(bee) == allocationSize && calc < dist)
+                {
+                    closest = plant;
+                    dist = calc;
+                }
             }
         }
         return closest;
@@ -462,15 +488,22 @@ public class EcosystemLogic : TimeManagerObserver
             GrassReproduction();
             PlantReproductionIncremental(FlowerType.Fertility);
             PlantReproductionIncremental(FlowerType.Health);
-        }
-        if (season == Season.Wane)
-        {
             PlantReproductionIncremental(FlowerType.Lethality);
+            PlantReproductionIncremental(FlowerType.Expulsion);
+            PlantReproductionIncremental(FlowerType.Rapidity);
         }
     }
 
     public override void SeasonLerp(Season season, float seasonProgressed)
     {
+        grassHeight = waxHeight;
+        grassWidth = waxWidth;
+        //grassTesselationAmount = 9;
+        grassBendAmount = waxBend;
+        topColour = ColourData.instance.springTopGrass;
+        bottomColour = ColourData.instance.springBottomGrass;
+        SetGlobalShaderVariables();
+        /*
         if (season == Season.Wax)
         {
             if (seasonProgressed <= 0.33f)
@@ -541,5 +574,8 @@ public class EcosystemLogic : TimeManagerObserver
                 SetGlobalShaderVariables();
             }
         }
+        */
+
+
     }
 }

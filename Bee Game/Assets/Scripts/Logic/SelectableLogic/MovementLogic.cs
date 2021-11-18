@@ -63,6 +63,11 @@ public class MovementLogic
         return (Vector3.Distance(trans.position, command.GetDestination()) < distanceCheck);
     }
 
+    public static void LookAt(Transform trans, Vector3 destination)
+    {
+        LookTowards(trans, destination - trans.position);
+    }
+
     private static void LookTowards(Transform trans, Vector3 bearing)
     {
         Vector3 lookDir = bearing;

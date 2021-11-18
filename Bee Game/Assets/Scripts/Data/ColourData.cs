@@ -26,6 +26,10 @@ public class ColourData : MonoBehaviour
     public Color hostile;
     public Color neutral;
 
+    public Color rapidityBuff;
+    public Color lethalityBuff;
+    public Color expulsionBuff;
+
     public Material GrowthMaskMaterial;
 
     public List<Sprite> beeGrowthStages = new List<Sprite>();

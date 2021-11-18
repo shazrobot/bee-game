@@ -61,6 +61,12 @@ public class SelectedUILogic : MonoBehaviour
             case FlowerType.Lethality:
                 selectedName.text = "Lethality Flower";
                 break;
+            case FlowerType.Rapidity:
+                selectedName.text = "Rapidity Flower";
+                break;
+            case FlowerType.Expulsion:
+                selectedName.text = "Expulsion Flower";
+                break;
         }
         rowOne.SetActive(true);
         rowOneInfo.text = string.Format("{0} Gr        {1} Gatherers", plant.pollenAmount, plant.GetGathererAllocationSize());

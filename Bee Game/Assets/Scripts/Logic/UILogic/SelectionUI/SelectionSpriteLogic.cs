@@ -88,7 +88,7 @@ public class SelectionSpriteLogic : MonoBehaviour
         UpdateSpriteLocations();
     }
 
-    private void FixedUpdate()
+    private void Update()
     {
         UpdateSpriteLocations();
     }

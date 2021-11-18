@@ -93,9 +93,21 @@ public class BeeAnimations : MonoBehaviour
         animatorController.SetBool(gatheringHash, false);
     }
 
-    public void SetRedStatus(bool status)
+    public void SetBuffStatus(FlowerType status, bool active)
     {
-        redStatusIndicator.SetActive(status);
+        redStatusIndicator.SetActive(active);
+        if(status == FlowerType.Rapidity)
+        {
+            redStatusIndicator.GetComponent<SpriteRenderer>().color = ColourData.instance.rapidityBuff;
+        }
+        else if(status == FlowerType.Lethality)
+        {
+            redStatusIndicator.GetComponent<SpriteRenderer>().color = ColourData.instance.lethalityBuff;
+        }
+        else if (status == FlowerType.Expulsion)
+        {
+            redStatusIndicator.GetComponent<SpriteRenderer>().color = ColourData.instance.expulsionBuff;
+        }
     }
 
     public void HideRedStatus()
